@@ -284,6 +284,20 @@ const TIPS = {
   repairReserve: '<strong>Reserva de reparaciones.</strong> Dinero que apartas al año para fallas fuera del mantenimiento normal. Crece con la edad del auto; importante en usados y fuera de garantía.',
   generalInflation: '<strong>Inflación general de costos.</strong> Cuánto suben al año el seguro, refrendo, mantenimiento y demás gastos (aparte del combustible, que tiene su propia inflación).',
   depreciationCost: '<strong>Costo por depreciación.</strong> Lo que el auto pierde de valor en el horizonte (precio − valor de reventa). Suele ser el costo más grande de tener un auto, aunque no lo "sientas" cada mes.',
+  // --- FEATURE 1: régimen fiscal Uber ---
+  taxRegime: '<strong>Régimen fiscal del ingreso Uber.</strong> Cómo se calcula el impuesto de cada viaje.<br/><strong>RESICO (realista):</strong> la plataforma retiene un % pequeño del ingreso bruto (≈2.5%). Es lo que aplica a la mayoría de conductores en México hoy.<br/><strong>Bruto (escolar):</strong> % sobre la tarifa bruta del viaje (30% por defecto). Es el supuesto del problema/escuela; sobreestima mucho el impuesto.<br/><strong>Utilidad:</strong> el % se aplica sólo a la ganancia del viaje (tarifa − comisión − costo variable), no al bruto.',
+  resicoRate: '<strong>Retención RESICO.</strong> Porcentaje que la plataforma retiene de tu ingreso BRUTO bajo el régimen simplificado (RESICO). En México la retención de plataformas digitales ronda 2.1% a 2.5% del ingreso.',
+  // --- FEATURE 2: tipo de financiamiento ---
+  financeType: '<strong>Tipo de financiamiento.</strong> Cómo estructuras el crédito.<br/><strong>Tradicional:</strong> mensualidad fija que liquida todo el préstamo al final del plazo.<br/><strong>Pago final (globo):</strong> dejas un valor residual sin amortizar; la mensualidad baja, pero al final debes pagar el globo o refinanciarlo.<br/><strong>Arrendamiento:</strong> rentas el auto, NO eres dueño: no hay reventa ni depreciación a tu favor, pero la salida inicial y la mensualidad suelen ser menores.',
+  balloonPct: '<strong>Valor residual (globo).</strong> Fracción del monto financiado que NO se amortiza en las mensualidades y queda como un pago único al final del plazo. Baja tu mensualidad pero te deja un pago grande (o un refinanciamiento) al cierre. Común en planes de agencia.',
+  leaseMonthly: '<strong>Renta mensual del arrendamiento.</strong> Lo que pagas cada mes por usar el auto sin ser dueño. No incluye seguro, gasolina ni mantenimiento (esos los sigues pagando tú como arrendatario).',
+  leaseDownPayment: '<strong>Pago inicial del arrendamiento.</strong> Desembolso único al firmar (depósito/comisión de apertura). NO se recupera al final porque nunca eres dueño del auto.',
+  leaseTermMonths: '<strong>Plazo del arrendamiento.</strong> Meses de duración del contrato. Si tu horizonte de análisis es menor, sólo se cuentan las rentas dentro del horizonte.',
+  leaseKmCapYear: '<strong>Límite de km al año (arrendamiento).</strong> Kilometraje incluido en el contrato. Si manejas más (típico en Uber), cada km extra se cobra como penalización.',
+  leaseExcessKmFee: '<strong>Cuota por km excedente.</strong> Lo que cobra el arrendador por cada kilómetro arriba del límite anual. Para uso intensivo (Uber) esta penalización puede ser fuerte.',
+  // --- FEATURE 3: seguro como % del valor ---
+  insuranceMode: '<strong>Cómo cobras el seguro.</strong><br/><strong>Monto fijo:</strong> una prima mensual plana que tú capturas.<br/><strong>% del valor:</strong> la prima anual es un porcentaje del valor del auto, así que BAJA cada año conforme el auto se deprecia (realista para cobertura amplia, donde la prima sigue el valor asegurado).',
+  insurancePctOfValue: '<strong>Seguro como % del valor/año.</strong> Prima anual como porcentaje del valor depreciado del auto. La cobertura amplia en México suele rondar 3% a 6% del valor asegurado al año; declina conforme el auto pierde valor.',
 };
 
 // Nombre a mostrar del auto: usa el preset, o el nombre importado por IA si es custom. (audit fix)
@@ -309,6 +323,37 @@ function buildAmortization(principal, annualRate, months) {
     rows.push({ month:m, payment, interest, principal:principalPart, balance:bal, cumInt, cumPrin });
   }
   return { payment, rows, totalPaid: payment*months, totalInterest: payment*months - principal };
+}
+
+// Amortización con PAGO FINAL / GLOBO (residual): común en México (crédito con
+// valor residual). El pago mensual amortiza sólo (principal − VP del globo), de
+// modo que el saldo al final del plazo queda EXACTAMENTE en balloonAmount, que
+// se liquida en el último mes. Pagos mensuales más bajos que una anualidad pura.
+//   A = (P − balloon·(1+i)^−n) · i(1+i)^n / [(1+i)^n − 1]
+function buildBalloonAmortization(principal, annualRate, months, balloonAmount) {
+  if (principal <= 0 || months <= 0) return { payment:0, rows:[], totalPaid:0, totalInterest:0, balloon:0 };
+  const balloon = clamp(balloonAmount, 0, principal);
+  const r = annualRate / 12;
+  let payment;
+  if (r === 0) {
+    payment = (principal - balloon) / months;
+  } else {
+    const pvBalloon = balloon * Math.pow(1 + r, -months);       // VP del globo a tasa del crédito
+    payment = (principal - pvBalloon) * r / (1 - Math.pow(1 + r, -months));
+  }
+  let bal = principal; const rows = []; let cumInt = 0, cumPrin = 0;
+  for (let m = 1; m <= months; m++) {
+    const interest = bal * r;
+    let principalPart = payment - interest;
+    // En el último mes se liquida también el globo (sale del saldo, no del pago mensual regular).
+    const balloonThisMonth = (m === months) ? bal - principalPart : 0;
+    principalPart += balloonThisMonth;
+    bal = Math.max(0, bal - principalPart); cumInt += interest; cumPrin += principalPart;
+    rows.push({ month:m, payment: payment + balloonThisMonth, interest, principal:principalPart, balance:bal, cumInt, cumPrin, balloon: balloonThisMonth });
+  }
+  // totalPaid = mensualidades regulares + el globo final; interés total = todo lo pagado − principal.
+  const totalPaid = payment * months + balloon;
+  return { payment, rows, totalPaid, totalInterest: totalPaid - principal, balloon };
 }
 
 // ============================================================================
@@ -434,22 +479,55 @@ function calculate(I) {
   const horizonMonths = years * 12;
   // Auto a cuenta (trade-in): actúa como enganche adicional, reduce lo financiado.
   const tradeInValue = Math.min(nonNegative(I.tradeInValue), carPrice);
+  // FEATURE 2 — tipo de financiamiento. 'lease' SOLO aplica en compra a crédito;
+  // en efectivo/mixto se ignora (sigue siendo annuity sobre lo financiado).
+  const financeType = (I.purchaseMode === 'credit' ? (I.financeType || 'annuity') : 'annuity');
+  const isLease = financeType === 'lease';
+  const isBalloon = financeType === 'balloon';
+  // En arrendamiento NO eres dueño: no hay activo que financiar ni que revender.
+  const owned = !isLease;
+
   let cashPaid, financed;
-  if (I.purchaseMode === 'cash') { cashPaid = Math.max(0, carPrice - tradeInValue); financed = 0; }
+  if (isLease) {
+    // Arrendamiento: no se financia el auto; el "desembolso" inicial es el pago
+    // inicial del arrendamiento (no recuperable). El trade-in no aplica al lease.
+    cashPaid = nonNegative(I.leaseDownPayment);
+    financed = 0;
+  }
+  else if (I.purchaseMode === 'cash') { cashPaid = Math.max(0, carPrice - tradeInValue); financed = 0; }
   else if (I.purchaseMode === 'hybrid') { cashPaid = Math.min(nonNegative(I.cashAmount), carPrice - tradeInValue); financed = Math.max(0, carPrice - tradeInValue - cashPaid); }
   else { cashPaid = I.downPaymentMode === 'percent' ? carPrice * clamp(I.downPaymentPct, 0, 1) : Math.min(nonNegative(I.downPaymentFixed), carPrice); financed = Math.max(0, carPrice - cashPaid - tradeInValue); }
 
-  const months = financed > 0 ? Math.max(1, Math.round(positive(I.loanMonths, 1))) : 0;
   const interestRate = Math.max(-0.95, num(I.interestRate));
-  const amort = buildAmortization(financed, interestRate, months);
-  const monthlyPayment = amort.payment;
+  // Plazo: en lease es el plazo del arrendamiento; en crédito el del préstamo.
+  const months = isLease
+    ? Math.max(1, Math.round(positive(I.leaseTermMonths, 1)))
+    : (financed > 0 ? Math.max(1, Math.round(positive(I.loanMonths, 1))) : 0);
+  // Monto residual/globo (sólo balloon): fracción del financiado que NO se amortiza.
+  const balloonPct = isBalloon ? clamp(I.balloonPct, 0, 0.9) : 0;
+  const balloonAmount = isBalloon ? financed * balloonPct : 0;
+  // Amortización según el tipo: globo (residual) o anualidad estándar.
+  const amort = (isBalloon && financed > 0)
+    ? buildBalloonAmortization(financed, interestRate, months, balloonAmount)
+    : buildAmortization(financed, interestRate, months);
+  const balloonPayment = amort.balloon || 0;   // pago final del globo (0 si no aplica)
+
+  // Mensualidad mostrada: en lease es la renta mensual; si no, la del crédito.
+  const leaseMonthly = nonNegative(I.leaseMonthly);
+  const monthlyPayment = isLease ? leaseMonthly : amort.payment;
   const totalInterest = amort.totalInterest;
   const openingFee = financed * nonNegative(I.openingFeePct);
 
   const r = interestRate / 12;
-  const pvOfPayments = financed > 0 ? (r === 0 ? monthlyPayment * months : monthlyPayment * (1 - Math.pow(1 + r, -months)) / r) : 0;
-  const pvTotal = pvOfPayments + cashPaid + openingFee;
-  const fvTotal = amort.totalPaid + cashPaid + openingFee;
+  // VP de los pagos del crédito a su propia tasa (anualidad regular; el globo entra como flujo único).
+  const pvOfPayments = financed > 0
+    ? (r === 0 ? amort.payment * months : amort.payment * (1 - Math.pow(1 + r, -months)) / r)
+        + (isBalloon ? balloonAmount * Math.pow(1 + r, -months) : 0)
+    : 0;
+  // En lease: VP/VF se basan en las rentas + pago inicial (no hay crédito que descontar).
+  const leasePvPayments = isLease ? (r === 0 ? leaseMonthly * Math.min(months, horizonMonths) : leaseMonthly * (1 - Math.pow(1 + r, -Math.min(months, horizonMonths))) / r) : 0;
+  const pvTotal = isLease ? (leasePvPayments + cashPaid) : (pvOfPayments + cashPaid + openingFee);
+  const fvTotal = isLease ? (leaseMonthly * Math.min(months, horizonMonths) + cashPaid) : (amort.totalPaid + cashPaid + openingFee);
   const timeValueOfMoney = fvTotal - pvTotal;
 
   const isUberMode = I.operationMode !== 'no-uber';
@@ -477,8 +555,22 @@ function calculate(I) {
   const maintCostPerKm = nonNegative(I.annualMaintenance) / ASSUMED_BASE_KM_YEAR;
   const maintCostPerUberKm = maintCostPerKm * (1 + nonNegative(I.uberWearFactor));
 
-  // Fijos mensuales que NO dependen de km (todo menos energía y mantenimiento variable)
-  const monthlyIns      = nonNegative(I.monthlyInsurance);
+  // FEATURE 3 — seguro: plano o como % del valor del auto (declina con la depreciación).
+  // insuranceAnnualForYear(y) entrega la prima ANUAL del año y (y=1..años).
+  //   'fixed'      → monthlyInsurance · 12 (constante).
+  //   'pctOfValue' → insurancePctOfValue · valor depreciado a inicio del año (= valor al cierre de y−1,
+  //                  o el precio para el año 1). Sólo si eres dueño; en lease el seguro lo paga el
+  //                  arrendatario sobre el valor del auto igualmente (cobertura amplia).
+  const insuranceMode = I.insuranceMode === 'pctOfValue' ? 'pctOfValue' : 'fixed';
+  const insurancePctOfValue = clamp(I.insurancePctOfValue, 0, 0.3);
+  const insuranceAnnualForYear = (y) => {
+    if (insuranceMode !== 'pctOfValue') return nonNegative(I.monthlyInsurance) * 12;
+    const valStart = depreciatedValue(carPrice, I, y - 1); // valor a inicio del año y
+    return insurancePctOfValue * valStart;
+  };
+  // Fijos mensuales que NO dependen de km (todo menos energía y mantenimiento variable).
+  // monthlyIns es el VALOR REPRESENTATIVO (año 1) que ven los KPIs y el break-even.
+  const monthlyIns      = insuranceAnnualForYear(1) / 12;
   const monthlyRefrendo = nonNegative(I.monthlyRefrendo);
   const monthlyData     = isUberMode ? nonNegative(I.dataPlan) : 0;
   const monthlyCarWash  = isUberMode ? nonNegative(I.carWash) : nonNegative(I.carWash) * 0.4;
@@ -500,15 +592,21 @@ function calculate(I) {
   const acquisitionFees = nonNegative(I.acquisitionFees);
   const upfrontCash = cashPaid + openingFee + oneTimeUberCosts + acquisitionFees;
 
-  const valueAtEnd = depreciatedValue(carPrice, I, years);
-  const grossSalePrice = valueAtEnd * nonNegative(I.salesFactor);
+  // Valor depreciado: sólo importa si eres dueño. En arrendamiento el auto NO es tuyo,
+  // así que no hay valor de reventa que recuperar (FEATURE 2 · lease).
+  const valueAtEnd = owned ? depreciatedValue(carPrice, I, years) : 0;
+  const grossSalePrice = owned ? valueAtEnd * nonNegative(I.salesFactor) : 0;
   // Costo de venta al liquidar (comisión/agencia, trámite de traspaso).
   const sellingCostPct = clamp(I.sellingCostPct, 0, 0.5);
-  const actualSalePrice = grossSalePrice * (1 - sellingCostPct);
+  const actualSalePrice = owned ? grossSalePrice * (1 - sellingCostPct) : 0;
   const monthAtEnd = Math.min(horizonMonths, months);
-  const remainingDebt = (horizonMonths >= months || months === 0) ? 0 : (amort.rows[monthAtEnd - 1] ? amort.rows[monthAtEnd - 1].balance : 0);
+  // Deuda viva al horizonte. En balloon, el saldo de la fila ya incorpora el residual:
+  // si el horizonte alcanza el plazo, el globo se liquida (saldo 0); si no, queda saldo
+  // (incluida la parte residual aún no amortizada). En lease no hay deuda.
+  const remainingDebt = (isLease || horizonMonths >= months || months === 0) ? 0 : (amort.rows[monthAtEnd - 1] ? amort.rows[monthAtEnd - 1].balance : 0);
   // Liquidación: lo que realmente recuperas al final (venta neta − deuda viva).
-  const terminalRecovery = actualSalePrice - remainingDebt;
+  // En lease es 0 (no hay activo ni deuda).
+  const terminalRecovery = isLease ? 0 : (actualSalePrice - remainingDebt);
   const liquidationPosition = terminalRecovery;
   const finalPosition = terminalRecovery; // compat hacia atrás
 
@@ -517,10 +615,25 @@ function calculate(I) {
   const uberCommissionRate = clamp(I.uberCommission, 0, 1);
   const taxRate = clamp(I.taxRate, 0, 1);
   const platformCommission = grossPerTrip * uberCommissionRate;
-  const taxAmountPerTrip = grossPerTrip * taxRate;
+  const variableCostPerTrip = (energyCostPerKm + maintCostPerUberKm) * kmPerTrip;
+
+  // FEATURE 1 — régimen fiscal del ingreso Uber. Tres formas de calcular el impuesto/viaje:
+  //   'gross'  (ESCOLAR, comportamiento previo): taxRate · tarifa bruta (default taxRate 0.30).
+  //   'resico' (REALISTA, NUEVO DEFAULT): retención de plataforma resicoRate · tarifa bruta (~2.5%).
+  //   'net'    : taxRate sobre la UTILIDAD por viaje (tarifa − comisión − costo variable), nunca negativa.
+  const taxRegime = I.taxRegime || 'resico';
+  const resicoRate = clamp(I.resicoRate, 0, 0.2);
+  let taxAmountPerTrip;
+  if (taxRegime === 'gross') {
+    taxAmountPerTrip = grossPerTrip * taxRate;
+  } else if (taxRegime === 'net') {
+    const profitBeforeTax = grossPerTrip - platformCommission - variableCostPerTrip;
+    taxAmountPerTrip = taxRate * Math.max(0, profitBeforeTax);
+  } else { // 'resico'
+    taxAmountPerTrip = grossPerTrip * resicoRate;
+  }
   const afterUber = grossPerTrip - platformCommission;
   const netRevenuePerTrip = grossPerTrip - platformCommission - taxAmountPerTrip;
-  const variableCostPerTrip = (energyCostPerKm + maintCostPerUberKm) * kmPerTrip;
   const netContributionPerTrip = netRevenuePerTrip - variableCostPerTrip;
   const netPerTrip = netRevenuePerTrip; // compat: ingreso neto antes de costo variable
 
@@ -607,18 +720,33 @@ function calculate(I) {
   const repairReserveYear = (y) => repairBase * Math.pow(1 + repairGrowth, baseAgeYears + (y - 1));
 
   const loanMonthsInYear = (y) => { if (months === 0) return 0; const overlapEnd = Math.min(y*12, months); return Math.max(0, overlapEnd - (y-1)*12); };
+  // FEATURE 2 — meses de RENTA del arrendamiento dentro del año y (limitado por plazo y horizonte).
+  const leaseMonthsInYear = (y) => { if (!isLease) return 0; const overlapEnd = Math.min(y*12, months); return Math.max(0, overlapEnd - (y-1)*12); };
+  // FEATURE 2 — penalización por exceso de km del arrendamiento ese año (cap anual · cuota/km).
+  const leaseKmCapYear = nonNegative(I.leaseKmCapYear);
+  const leaseExcessKmFee = nonNegative(I.leaseExcessKmFee);
+  const annualKm = monthlyKm * 12;
+  const leaseKmPenaltyYear = (isLease && leaseKmCapYear > 0 && annualKm > leaseKmCapYear)
+    ? (annualKm - leaseKmCapYear) * leaseExcessKmFee : 0;
+  // FEATURE 2 — mes en que vence el globo (balloon) dentro del horizonte; su año recibe el pago final.
+  const balloonDueYear = (isBalloon && balloonAmount > 0 && months > 0 && months <= horizonMonths) ? Math.ceil(months / 12) : 0;
   const cashflow = [];
   let cumRevenue = 0, cumCosts = 0, cCar = 0, cEnergy = 0, cInsRef = 0, cMaint = 0, cOther = 0, cTotal = 0;
   let totalRepairReserve = 0;
   for (let y = 1; y <= years; y++) {
     const infl = Math.pow(1 + generalInflation, y - 1);
-    const yearPayment = loanMonthsInYear(y) * monthlyPayment;
+    // Pago del año: lease usa la renta mensual; crédito usa la mensualidad. El globo se
+    // suma como pago único en su año de vencimiento (no se prorratea en la mensualidad).
+    const yearPayment = isLease
+      ? leaseMonthsInYear(y) * leaseMonthly
+      : loanMonthsInYear(y) * monthlyPayment + (y === balloonDueYear ? balloonAmount : 0);
     const yearEnergy = (energyByYear[y-1]?.cost || 0) * 12;                 // ya trae inflación de combustible
-    // Seguro PLANO en nominal: en la práctica baja con el valor del auto, así que
-    // inflarlo sería irreal. El refrendo/tenencia sí sigue la inflación. (audit fix)
-    const yearInsRef = monthlyIns * 12 + monthlyRefrendo * 12 * infl;
-    const yearRepair = repairReserveYear(y);
-    const yearMaint = monthlyMaint * 12 * infl + yearRepair;
+    // Seguro: en modo 'fixed' es plano en nominal (no se infla: en la práctica baja con el
+    // valor del auto). En modo 'pctOfValue' declina con la depreciación (FEATURE 3).
+    // El refrendo/tenencia sí sigue la inflación. Más la penalización por km del lease.
+    const yearInsRef = insuranceAnnualForYear(y) + monthlyRefrendo * 12 * infl;
+    const yearRepair = owned ? repairReserveYear(y) : 0;   // en lease no apartas reparaciones mayores
+    const yearMaint = monthlyMaint * 12 * infl + yearRepair + leaseKmPenaltyYear;
     const yearOther = (monthlyData + monthlyCarWash + monthlyTips + monthlyMisc + monthlyAccess) * 12 * infl;
     const yearUpfront = (y === 1) ? upfrontCash : 0;
     totalRepairReserve += yearRepair;
@@ -630,15 +758,16 @@ function calculate(I) {
     cumRevenue += annualRevenue; cumCosts += annualCosts;
     cashflow.push({
       year: 2025 + y, revenue: annualRevenue, costs: annualCosts, cumRevenue, cumCosts,
-      depValue: depreciatedValue(carPrice, I, y),
-      debtRemaining: (y*12 >= months || months === 0) ? 0 : (amort.rows[y*12 - 1] ? amort.rows[y*12 - 1].balance : 0),
+      depValue: owned ? depreciatedValue(carPrice, I, y) : 0,   // en lease no eres dueño → 0
+      debtRemaining: (isLease || y*12 >= months || months === 0) ? 0 : (amort.rows[y*12 - 1] ? amort.rows[y*12 - 1].balance : 0),
       cCar: Math.round(cCar), cEnergy: Math.round(cEnergy), cInsRef: Math.round(cInsRef),
       cMaint: Math.round(cMaint), cOther: Math.round(cOther), cTotal: Math.round(cTotal),
     });
   }
   // Posición de liquidación por año = valor de venta neto ese año − deuda viva ese año.
   // Útil para que la gráfica de comparación incluya venta/deuda y no sólo flujo. (audit fix #comparison)
-  const saleNetFactor = nonNegative(I.salesFactor) * (1 - sellingCostPct);
+  // En lease no hay reventa: saleNetFactor=0 deja liqValue = −deuda = 0.
+  const saleNetFactor = owned ? nonNegative(I.salesFactor) * (1 - sellingCostPct) : 0;
   cashflow.forEach(p => { p.liqValue = Math.round(p.depValue * saleNetFactor - p.debtRemaining); });
 
   const totalSpentGross = cTotal;
@@ -675,8 +804,9 @@ function calculate(I) {
   const costPerKm = totalKmHorizon > 0 ? tcoTotal / totalKmHorizon : NaN;
   // Depreciación como costo: pérdida de valor del auto (precio − valor de mercado
   // al final, ANTES de costos de venta; el costo de venta es transacción, no depreciación).
-  const depreciationCost = carPrice - grossSalePrice;
-  const financingCost = totalInterest + openingFee; // costo del crédito
+  // En arrendamiento no eres dueño → no asumes depreciación del activo (FEATURE 2 · lease).
+  const depreciationCost = owned ? (carPrice - grossSalePrice) : 0;
+  const financingCost = isLease ? (leaseMonthly * Math.min(months, horizonMonths) + cashPaid) : (totalInterest + openingFee); // costo del crédito / arrendamiento
 
   // CAT y tasa efectiva anual del crédito (incluye comisión de apertura).
   const ear = financed > 0 ? Math.pow(1 + interestRate/12, 12) - 1 : 0;
@@ -712,6 +842,10 @@ function calculate(I) {
     tradeInValue, acquisitionFees, sellingCostPct, grossSalePrice, generalInflation, totalRepairReserve, baseAgeYears,
     discountAnnual, npvProject, irrProject, pvLifetimeCost, eac, tcoTotal, tcoPerYear, totalKmHorizon, costPerKm,
     depreciationCost, financingCost, ear, cat, financeVsCashPV, pvFinancedPath, pvCashPath, opportunityCostUpfront,
+    // FEATURE 1 (impuestos) · FEATURE 2 (financiamiento) · FEATURE 3 (seguro)
+    taxRegime, taxRate, resicoRate,
+    financeType, owned, isLease, isBalloon, balloonPct, balloonAmount, balloonPayment, leaseMonthly, leaseKmPenaltyYear,
+    insuranceMode, insurancePctOfValue,
   };
 }
 
@@ -820,12 +954,23 @@ const DEFAULT_INPUTS = {
   carDescription:'', carJustification:'', carName:'',
   purchaseMode:'credit', downPaymentMode:'percent', downPaymentPct:0.20, downPaymentFixed:56000,
   cashAmount:100000, interestRate:0.135, loanMonths:48, openingFeePct:0.02,
+  // Tipo de financiamiento (FEATURE 2). 'annuity' = crédito tradicional (default, comportamiento previo).
+  // 'balloon' = crédito con pago final/residual. 'lease' = arrendamiento (sin propiedad).
+  financeType:'annuity', balloonPct:0.35,
+  leaseMonthly:6500, leaseDownPayment:20000, leaseTermMonths:48, leaseKmCapYear:20000, leaseExcessKmFee:3,
   operationMode:'uber-breakeven', monthlyProfitTarget:5000,
   city:'mty', cityName:'Monterrey', avgFare:140, uberCommission:0.25, taxRate:0.30,
+  // Régimen fiscal del ingreso Uber (FEATURE 1). 'resico' es el NUEVO DEFAULT (realista):
+  // retención de plataforma ~2.5% del ingreso bruto. 'gross' = supuesto escolar (30% del bruto).
+  // 'net' = impuesto sobre la utilidad por viaje (usa taxRate).
+  taxRegime:'resico', resicoRate:0.025,
   tripsPerHour:3, maxHoursPerDay:8, workDaysPerMonth:22, personalKmDaily:20, uberWearFactor:0.30,
   uberKmPerTrip:8,
   fuelPrice:24.5, dieselPrice:26.0, electricityPrice:4.2, fuelInflation:0.06, electricityInflation:0.04,
   monthlyInsurance:2000, annualMaintenance:8000, monthlyRefrendo:500, dataPlan:400,
+  // Modo de seguro (FEATURE 3). 'fixed' = monto plano (default). 'pctOfValue' = % anual del
+  // valor depreciado del auto (baja con la depreciación; realista para cobertura amplia).
+  insuranceMode:'fixed', insurancePctOfValue:0.045,
   carWash:800, carWashTips:400, miscellaneous:2000, accessories:100,
   toxicologyReport:400, uberCertification:900,
   horizonYears:4, depreciationRate:0.20, salesFactor:1.0, monthlyIncome:0,
@@ -881,6 +1026,8 @@ Esquema EXACTO:
   },
   "costs": {
     "monthlyInsurance": 2000,
+    "insuranceMode": "fixed",
+    "insurancePctOfValue": 0.045,
     "annualMaintenance": 8000,
     "monthlyRefrendo": 500,
     "dataPlan": 400,
@@ -892,6 +1039,8 @@ Esquema EXACTO:
     "uberWearFactor": 0.30,
     "uberKmPerTrip": 8
   },
+  "uber": { "taxRegime": "resico", "resicoRate": 0.025, "uberCommission": 0.25, "taxRate": 0.30 },
+  "financing": { "financeType": "annuity", "balloonPct": 0.35, "leaseMonthly": 6500, "leaseDownPayment": 20000, "leaseTermMonths": 48, "leaseKmCapYear": 20000, "leaseExcessKmFee": 3 },
   "oneTime": { "toxicologyReport": 400, "uberCertification": 900, "acquisitionFees": 0 },
   "projection": { "depreciationMethod": "declining", "depreciationRate": 0.20, "firstYearDepreciation": 0.25, "salesFactor": 1.0, "sellingCostPct": 0.0, "interestRate": 0.135 },
   "sources": {
@@ -904,6 +1053,14 @@ Esquema EXACTO:
     "batteryCapacityKwh": "URL si aplica, si no null",
     "chargerPowerKw": "URL/estimación potencia de cargador doméstico recomendado (si EV/híbrido enchufable)",
     "monthlyInsurance": "URL aseguradora — si lo usarás en Uber cotiza póliza COMERCIAL (más cara)",
+    "insuranceMode": "fixed si das un monto plano; pctOfValue si la prima es % del valor del auto (cobertura amplia)",
+    "insurancePctOfValue": "[ESTIMACIÓN] prima anual como % del valor (cobertura amplia 3-6%) si insuranceMode=pctOfValue",
+    "taxRegime": "resico (realista: retención de plataforma), gross (escolar: % de tarifa bruta), o net (% sobre utilidad)",
+    "resicoRate": "URL/Hacienda — retención RESICO de plataformas digitales (~2.1-2.5% del ingreso bruto)",
+    "financeType": "annuity (crédito normal), balloon (pago final/residual), o lease (arrendamiento)",
+    "balloonPct": "[ESTIMACIÓN] valor residual del plan de agencia si financeType=balloon (típico 0.25-0.45)",
+    "leaseMonthly": "URL/cotización renta mensual de arrendamiento (si financeType=lease)",
+    "leaseDownPayment": "URL/cotización pago inicial del arrendamiento (no recuperable)",
     "annualMaintenance": "URL costos de servicio del fabricante/taller",
     "repairReserveAnnual": "[ESTIMACIÓN] reserva de reparaciones/año; para usados fuera de garantía 5,000-15,000",
     "monthlyRefrendo": "URL gobierno del estado (el refrendo/tenencia varía por estado)",
@@ -935,6 +1092,8 @@ Notas técnicas:
 - monthlyInsurance, monthlyRefrendo, dataPlan, carWash, carWashTips, miscellaneous, accessories son MENSUALES.
 - annualMaintenance es ANUAL.
 - toxicologyReport y uberCertification son pagos ÚNICOS (una sola vez).
+- "uber.taxRegime": usa "resico" salvo que sea un caso escolar (entonces "gross"). leaseMonthly/leaseDownPayment sólo si financeType="lease".
+- "costs.insuranceMode": usa "pctOfValue" sólo si cotizaste el seguro como porcentaje del valor; si no, "fixed" con monthlyInsurance.
 
 Recuerda: SOLO el JSON, con una fuente por cada dato en "sources".`;
 }
@@ -961,6 +1120,8 @@ function applyImportedJson(json, currentInputs) {
     if (json.costs) {
       const c = json.costs;
       if (c.monthlyInsurance != null) merged.monthlyInsurance = +c.monthlyInsurance;
+      if (c.insuranceMode === 'fixed' || c.insuranceMode === 'pctOfValue') merged.insuranceMode = c.insuranceMode;
+      if (c.insurancePctOfValue != null) merged.insurancePctOfValue = +c.insurancePctOfValue;
       if (c.annualMaintenance != null) merged.annualMaintenance = +c.annualMaintenance;
       if (c.monthlyRefrendo != null) merged.monthlyRefrendo = +c.monthlyRefrendo;
       if (c.dataPlan != null) merged.dataPlan = +c.dataPlan;
@@ -977,6 +1138,23 @@ function applyImportedJson(json, currentInputs) {
       if (o.toxicologyReport != null) merged.toxicologyReport = +o.toxicologyReport;
       if (o.uberCertification != null) merged.uberCertification = +o.uberCertification;
       if (o.acquisitionFees != null) merged.acquisitionFees = +o.acquisitionFees;
+    }
+    if (json.uber) {
+      const u = json.uber;
+      if (u.taxRegime === 'resico' || u.taxRegime === 'gross' || u.taxRegime === 'net') merged.taxRegime = u.taxRegime;
+      if (u.resicoRate != null) merged.resicoRate = +u.resicoRate;
+      if (u.uberCommission != null) merged.uberCommission = +u.uberCommission;
+      if (u.taxRate != null) merged.taxRate = +u.taxRate;
+    }
+    if (json.financing) {
+      const f = json.financing;
+      if (f.financeType === 'annuity' || f.financeType === 'balloon' || f.financeType === 'lease') merged.financeType = f.financeType;
+      if (f.balloonPct != null) merged.balloonPct = +f.balloonPct;
+      if (f.leaseMonthly != null) merged.leaseMonthly = +f.leaseMonthly;
+      if (f.leaseDownPayment != null) merged.leaseDownPayment = +f.leaseDownPayment;
+      if (f.leaseTermMonths != null) merged.leaseTermMonths = +f.leaseTermMonths;
+      if (f.leaseKmCapYear != null) merged.leaseKmCapYear = +f.leaseKmCapYear;
+      if (f.leaseExcessKmFee != null) merged.leaseExcessKmFee = +f.leaseExcessKmFee;
     }
     if (json.projection) {
       const p = json.projection;
@@ -1166,15 +1344,37 @@ const Sidebar = ({ inputs, setInputs, onReset, onSave }) => {
         <div className="field"><div className="field-label" style={{ marginBottom:4 }}>Forma de pago <Info text={TIPS.purchaseMode} /></div>
           <Segmented value={inputs.purchaseMode} onChange={v => set('purchaseMode', v)}
             options={[{value:'cash',label:'Efectivo'},{value:'credit',label:'Crédito'},{value:'hybrid',label:'Mixto'}]} /></div>
-        {inputs.purchaseMode==='credit' && (<>
+        {inputs.purchaseMode==='credit' && (
+          <div className="field"><div className="field-label" style={{ marginBottom:4 }}>Tipo de financiamiento <Info text={TIPS.financeType} /></div>
+            <Segmented value={inputs.financeType || 'annuity'} onChange={v => set('financeType', v)}
+              options={[{value:'annuity',label:'Tradicional'},{value:'balloon',label:'Pago final'},{value:'lease',label:'Arrendamiento'}]} />
+            <div style={{ fontSize:10.5, color:'var(--muted)', marginTop:-2, marginBottom:8, lineHeight:1.5 }}>
+              {(inputs.financeType||'annuity')==='annuity' && '→ Mensualidad fija que liquida todo el crédito al final del plazo.'}
+              {inputs.financeType==='balloon' && '→ Dejas un valor residual sin pagar; baja la mensualidad pero hay un pago final grande (el "globo").'}
+              {inputs.financeType==='lease' && '→ Rentas el auto: NO eres dueño, no hay reventa ni depreciación a tu favor.'}
+            </div></div>
+        )}
+        {/* Crédito tradicional o globo: enganche + tasa/plazo + (globo) residual */}
+        {inputs.purchaseMode==='credit' && (inputs.financeType||'annuity')!=='lease' && (<>
           <div className="field"><div className="field-label" style={{ marginBottom:4 }}>Forma del enganche</div>
             <Segmented value={inputs.downPaymentMode} onChange={v => set('downPaymentMode', v)} options={[{value:'percent',label:'Por porcentaje'},{value:'fixed',label:'Monto fijo'}]} /></div>
           {inputs.downPaymentMode==='percent'
             ? <Field label="Enganche" value={inputs.downPaymentPct} min={0.05} max={0.6} step={0.01} decimals={2} onChange={v => set('downPaymentPct', v)} suffix={`${fmtPct(inputs.downPaymentPct,0)} del precio`} />
             : <Field label="Enganche (monto)" value={inputs.downPaymentFixed} min={10000} max={500000} step={1000} onChange={v => set('downPaymentFixed', v)} suffix="MXN" />}
+          {inputs.financeType==='balloon' && <Field label="Valor residual (globo)" value={inputs.balloonPct} min={0} max={0.6} step={0.01} decimals={2} onChange={v => set('balloonPct', v)} suffix={`${fmtPct(inputs.balloonPct,0)} del financiado al final`} info={TIPS.balloonPct} />}
+        </>)}
+        {/* Arrendamiento: renta + pago inicial + plazo + tope de km */}
+        {inputs.purchaseMode==='credit' && inputs.financeType==='lease' && (<>
+          <Field label="Renta mensual" value={inputs.leaseMonthly} min={1000} max={30000} step={250} onChange={v => set('leaseMonthly', v)} suffix="MXN/mes (sin seguro ni gasolina)" info={TIPS.leaseMonthly} />
+          <Field label="Pago inicial del arrendamiento" value={inputs.leaseDownPayment} min={0} max={300000} step={1000} onChange={v => set('leaseDownPayment', v)} suffix="MXN (no recuperable)" info={TIPS.leaseDownPayment} />
+          <Field label="Plazo del arrendamiento" value={inputs.leaseTermMonths} min={12} max={84} step={6} onChange={v => set('leaseTermMonths', v)} suffix="meses" info={TIPS.leaseTermMonths} />
+          <Field label="Límite de km al año" value={inputs.leaseKmCapYear} min={0} max={60000} step={1000} onChange={v => set('leaseKmCapYear', v)} suffix={inputs.leaseKmCapYear>0 ? 'km/año incluidos' : 'sin límite'} info={TIPS.leaseKmCapYear} />
+          <Field label="Cuota por km excedente" value={inputs.leaseExcessKmFee} min={0} max={20} step={0.5} decimals={1} onChange={v => set('leaseExcessKmFee', v)} suffix="MXN/km extra" info={TIPS.leaseExcessKmFee} />
+          <div className="field-note">En arrendamiento NO eres dueño: no hay reventa ni depreciación a tu favor. Seguro, gasolina, refrendo y mantenimiento los sigues pagando tú.</div>
         </>)}
         {inputs.purchaseMode==='hybrid' && <Field label="Pago inicial en efectivo" value={inputs.cashAmount} min={0} max={2000000} step={1000} onChange={v => set('cashAmount', v)} suffix="MXN (el resto se financia)" />}
-        {inputs.purchaseMode!=='cash' && (<>
+        {/* Tasa/plazo/comisión: para crédito (no lease) y mixto. El lease no usa estos. */}
+        {inputs.purchaseMode!=='cash' && !(inputs.purchaseMode==='credit' && inputs.financeType==='lease') && (<>
           <Field label="Tasa de interés anual" value={inputs.interestRate} min={0.03} max={0.40} step={0.001} decimals={3} onChange={v => set('interestRate', v)} suffix={`${fmtPct(inputs.interestRate,1)} anual`} info="Créditos automotrices típicos: 10% a 18% anual (usados suelen ser más caros)." />
           <Field label="Plazo del crédito" value={inputs.loanMonths} min={6} max={84} step={6} onChange={v => set('loanMonths', v)} suffix="meses" />
           <Field label="Comisión de apertura" value={inputs.openingFeePct} min={0} max={0.10} step={0.001} decimals={3} onChange={v => set('openingFeePct', v)} suffix={fmtPct(inputs.openingFeePct,1)} info={TIPS.openingFee} />
@@ -1191,7 +1391,17 @@ const Sidebar = ({ inputs, setInputs, onReset, onSave }) => {
             <input className="input" type="text" value={inputs.cityName} onChange={e => set('cityName', e.target.value)} placeholder="Escribe tu ciudad" /></div>
           <Field label="Tarifa promedio por viaje" value={inputs.avgFare} min={50} max={500} step={5} onChange={v => set('avgFare', v)} suffix="MXN por viaje" info="Cuánto te pagan en promedio por viaje (antes de comisión)." />
           <Field label="Comisión Uber" value={inputs.uberCommission} min={0.10} max={0.40} step={0.01} decimals={2} onChange={v => set('uberCommission', v)} suffix={`Uber se queda ${fmtPct(inputs.uberCommission,0)}`} info={TIPS.uberCommission} />
-          <Field label="Impuestos" value={inputs.taxRate} min={0} max={0.45} step={0.01} decimals={2} onChange={v => set('taxRate', v)} suffix={`${fmtPct(inputs.taxRate,0)} al SAT`} info={TIPS.tax} />
+          <div className="field"><div className="field-label" style={{ marginBottom:4 }}>Régimen fiscal <Info text={TIPS.taxRegime} /></div>
+            <Segmented value={inputs.taxRegime || 'resico'} onChange={v => set('taxRegime', v)}
+              options={[{value:'resico',label:'RESICO (real)'},{value:'gross',label:'Bruto (escolar)'},{value:'net',label:'Utilidad'}]} />
+            <div style={{ fontSize:10.5, color:'var(--muted)', marginTop:-2, marginBottom:8, lineHeight:1.5 }}>
+              {(inputs.taxRegime||'resico')==='resico' && '→ Retención de plataforma sobre tu ingreso bruto (lo realista hoy en México).'}
+              {inputs.taxRegime==='gross' && '→ % de la tarifa bruta. Es el supuesto escolar/del problema (30%); sobreestima el impuesto.'}
+              {inputs.taxRegime==='net' && '→ % sobre la utilidad del viaje (tarifa − comisión − costo variable).'}
+            </div></div>
+          {(inputs.taxRegime||'resico')==='resico'
+            ? <Field label="Retención RESICO" value={inputs.resicoRate} min={0} max={0.10} step={0.001} decimals={3} onChange={v => set('resicoRate', v)} suffix={`${fmtPct(inputs.resicoRate,1)} del ingreso bruto`} info={TIPS.resicoRate} />
+            : <Field label="Impuestos" value={inputs.taxRate} min={0} max={0.45} step={0.01} decimals={2} onChange={v => set('taxRate', v)} suffix={inputs.taxRegime==='net' ? `${fmtPct(inputs.taxRate,0)} sobre utilidad` : `${fmtPct(inputs.taxRate,0)} de la tarifa bruta`} info={TIPS.tax} />}
           <Field label="Viajes por hora" value={inputs.tripsPerHour} min={0.5} max={5} step={0.1} decimals={1} onChange={v => set('tripsPerHour', v)} suffix={inputs.tripsPerHour>4 ? '⚠️ Máx. 4 según el problema' : 'viajes/hora'} info="El problema asume un tope realista de 4 viajes por hora." />
           <Field label="Horas máx. disponibles/día" value={inputs.maxHoursPerDay} min={1} max={16} step={0.5} decimals={1} onChange={v => set('maxHoursPerDay', v)} suffix="horas/día" />
           <Field label="Días trabajados al mes" value={inputs.workDaysPerMonth} min={1} max={31} step={1} onChange={v => set('workDaysPerMonth', v)} suffix="días" />
@@ -1217,7 +1427,12 @@ const Sidebar = ({ inputs, setInputs, onReset, onSave }) => {
         {usesElectricDrive && <Field label="Precio de electricidad" value={inputs.electricityPrice} min={0.5} max={20} step={0.1} decimals={2} onChange={v => set('electricityPrice', v)} suffix="MXN por kWh" />}
         <Field label="Inflación combustible/año" value={inputs.fuelInflation} min={0} max={0.30} step={0.005} decimals={3} onChange={v => set('fuelInflation', v)} suffix={`+${fmtPct(inputs.fuelInflation,1)} cada año`} info={TIPS.fuelInflation} />
         {usesElectricDrive && <Field label="Inflación electricidad/año" value={inputs.electricityInflation} min={0} max={0.30} step={0.005} decimals={3} onChange={v => set('electricityInflation', v)} suffix={`+${fmtPct(inputs.electricityInflation,1)} cada año`} />}
-        <Field label="Seguro mensual" value={inputs.monthlyInsurance} min={300} max={8000} step={50} onChange={v => set('monthlyInsurance', v)} suffix="MXN/mes" info={TIPS.insurance} />
+        <div className="field"><div className="field-label" style={{ marginBottom:4 }}>Cómo cobras el seguro <Info text={TIPS.insuranceMode} /></div>
+          <Segmented value={inputs.insuranceMode || 'fixed'} onChange={v => set('insuranceMode', v)}
+            options={[{value:'fixed',label:'Monto fijo'},{value:'pctOfValue',label:'% del valor'}]} /></div>
+        {(inputs.insuranceMode||'fixed')==='pctOfValue'
+          ? <Field label="Seguro (% del valor/año)" value={inputs.insurancePctOfValue} min={0.005} max={0.15} step={0.005} decimals={3} onChange={v => set('insurancePctOfValue', v)} suffix={`${fmtPct(inputs.insurancePctOfValue,1)}/año · baja al depreciarse`} info={TIPS.insurancePctOfValue} />
+          : <Field label="Seguro mensual" value={inputs.monthlyInsurance} min={300} max={8000} step={50} onChange={v => set('monthlyInsurance', v)} suffix="MXN/mes" info={TIPS.insurance} />}
         {inputs.operationMode!=='no-uber' && <div className="field-note">⚠️ Si usas el auto para Uber, muchas aseguradoras exigen una <strong>póliza comercial</strong> más cara que la de un auto particular. Por eso el default ya está en $2,000/mes.</div>}
         <Field label="Mantenimiento base anual" value={inputs.annualMaintenance} min={1000} max={60000} step={500} onChange={v => set('annualMaintenance', v)} suffix="MXN/año a 20,000 km" info={TIPS.maintenance} />
         <Field label="Refrendo / Tenencia" value={inputs.monthlyRefrendo} min={0} max={5000} step={50} onChange={v => set('monthlyRefrendo', v)} suffix="MXN/mes" info={TIPS.refrendo} />
@@ -1695,8 +1910,22 @@ const Formulas = ({ R, inputs }) => {
 
     <div className="formula-block"><div className="formula-name">1 · Mensualidad del crédito (anualidad)</div>
       <div className="formula-eq">A <span className="op">=</span> P <span className="op">×</span><span className="frac"><span>i (1 + i)<sup>n</sup></span><span>(1 + i)<sup>n</sup> − 1</span></span></div>
-      <div className="formula-where"><em>P</em> = lo que financias, <em>i</em> = tasa mensual = anual ÷ 12, <em>n</em> = meses.</div>
-      <div className="formula-substituted">A = {fmtMXN(R.financed)} × [{i.toFixed(5)} × (1+{i.toFixed(5)})^{n}] / [(1+{i.toFixed(5)})^{n} − 1] = <strong>{fmtMXN(R.monthlyPayment)}/mes</strong></div></div>
+      <div className="formula-where"><em>P</em> = lo que financias, <em>i</em> = tasa mensual = anual ÷ 12, <em>n</em> = meses. {R.isLease ? 'En arrendamiento NO se financia el auto: la "mensualidad" es la renta fija que capturas.' : R.isBalloon ? 'En crédito con pago final (globo), la mensualidad usa la fórmula 1-bis (residual).' : ''}</div>
+      <div className="formula-substituted">A = {fmtMXN(R.financed)} × [{i.toFixed(5)} × (1+{i.toFixed(5)})^{n}] / [(1+{i.toFixed(5)})^{n} − 1] = <strong>{fmtMXN(R.isLease ? R.financed>0 ? 0 : R.monthlyPayment : R.monthlyPayment)}/mes</strong>{R.isLease && <> · renta arrendamiento = <strong>{fmtMXN(R.leaseMonthly)}/mes</strong></>}</div></div>
+
+    {R.isBalloon && R.financed > 0 && (
+      <div className="formula-block" style={{ borderColor:'var(--accent)' }}><div className="formula-name">1-bis · Crédito con pago final (globo / residual)</div>
+        <div className="formula-eq">A <span className="op">=</span> (P − B·(1+i)<sup>−n</sup>) <span className="op">×</span><span className="frac"><span>i (1 + i)<sup>n</sup></span><span>(1 + i)<sup>n</sup> − 1</span></span> <span className="op">;</span> Globo <span className="op">=</span> B</div>
+        <div className="formula-where"><em>B</em> = valor residual ({fmtPct(R.balloonPct,0)} del financiado) que NO se amortiza en las mensualidades y se paga (o refinancia) al final del plazo. Por eso la mensualidad es menor que en un crédito tradicional, pero queda un pago grande al cierre.</div>
+        <div className="formula-substituted">B = {fmtPct(R.balloonPct,0)} × {fmtMXN(R.financed)} = {fmtMXN(R.balloonAmount)} · A = <strong>{fmtMXN(R.monthlyPayment)}/mes</strong> · pago final del globo en el mes {R.months} = <strong>{fmtMXN(R.balloonAmount)}</strong></div></div>
+    )}
+
+    {R.isLease && (
+      <div className="formula-block" style={{ borderColor:'var(--accent)' }}><div className="formula-name">1-ter · Arrendamiento (sin propiedad)</div>
+        <div className="formula-eq">TCO<sub>lease</sub> <span className="op">=</span> Inicial <span className="op">+</span> Σ renta <span className="op">+</span> Operativos <span className="op">+</span> Penalización<sub>km</sub></div>
+        <div className="formula-where">No eres dueño: financiado = 0, sin reventa ni depreciación a tu favor (recuperación terminal = 0). El pago inicial NO se recupera. Seguro, energía, refrendo y mantenimiento los pagas igual. Si los km del año superan el límite del contrato, se cobra una penalización por km excedente.</div>
+        <div className="formula-substituted">Inicial {fmtMXN(R.cashPaid)} + renta {fmtMXN(R.leaseMonthly)}/mes × {Math.min(R.months, inputs.horizonYears*12)} meses{R.leaseKmPenaltyYear>0 && <> + penalización km {fmtMXN(R.leaseKmPenaltyYear)}/año</>} · recuperación terminal = <strong>{fmtMXN(R.terminalRecovery)}</strong> · TCO = <strong>{fmtMXN(R.tcoTotal)}</strong></div></div>
+    )}
 
     <div className="formula-block"><div className="formula-name">2 · Valor Presente (VP)</div>
       <div className="formula-eq">VP <span className="op">=</span> A <span className="op">×</span><span className="frac"><span>1 − (1 + i)<sup>−n</sup></span><span>i</span></span> <span className="op">+</span> Enganche</div>
@@ -1722,9 +1951,13 @@ const Formulas = ({ R, inputs }) => {
       <div className="formula-substituted">V<sub>{inputs.horizonYears}</sub> = {fmtMXN(R.valueAtEnd)} ({fmtPct(R.valueAtEnd/Math.max(1,inputs.carPrice),0)} del precio) · venta neta esperada {fmtMXN(R.actualSalePrice)} · <strong>costo por depreciación {fmtMXN(R.depreciationCost)}</strong></div></div>
 
     <div className="formula-block"><div className="formula-name">6 · Contribución neta por viaje</div>
-      <div className="formula-eq">Ingreso <span className="op">=</span> T − (T·c<sub>uber</sub>) − (T·t) <span className="op">;</span> Contrib <span className="op">=</span> Ingreso <span className="op">−</span> costo<sub>var</sub>·km<sub>viaje</sub></div>
-      <div className="formula-where"><em>T</em> = tarifa bruta, <em>c<sub>uber</sub></em> = comisión, <em>t</em> = impuestos sobre tarifa bruta. El costo variable por km combina energía y mantenimiento base convertido a $/km con desgaste Uber.</div>
-      <div className="formula-substituted">Ingreso = {fmtMXN(R.grossPerTrip)} − {fmtMXN(R.platformCommission,2)} − {fmtMXN(R.taxAmountPerTrip,2)} = {fmtMXN(R.netRevenuePerTrip,2)} · Costo var = {fmtMXN(R.variableCostPerTrip,2)} · <strong>Contribución = {fmtMXN(R.netContributionPerTrip,2)}/viaje</strong></div></div>
+      <div className="formula-eq">Ingreso <span className="op">=</span> T − (T·c<sub>uber</sub>) − Impuesto <span className="op">;</span> Contrib <span className="op">=</span> Ingreso <span className="op">−</span> costo<sub>var</sub>·km<sub>viaje</sub></div>
+      <div className="formula-where"><em>T</em> = tarifa bruta, <em>c<sub>uber</sub></em> = comisión. El <strong>impuesto depende del régimen fiscal</strong> elegido (FEATURE 1):
+        {R.taxRegime==='gross' && <> régimen <strong>Bruto (escolar)</strong>: impuesto = {fmtPct(R.taxRate,0)} × tarifa bruta. Es el supuesto del problema/escuela y sobreestima el impuesto real.</>}
+        {R.taxRegime==='net' && <> régimen <strong>Utilidad</strong>: impuesto = {fmtPct(R.taxRate,0)} × utilidad del viaje (tarifa − comisión − costo variable), nunca negativo.</>}
+        {(R.taxRegime!=='gross' && R.taxRegime!=='net') && <> régimen <strong>RESICO (realista)</strong>: retención de plataforma = {fmtPct(R.resicoRate,1)} × tarifa bruta. Es lo que aplica hoy a la mayoría de conductores en México.</>}
+        {' '}El costo variable por km combina energía y mantenimiento base convertido a $/km con desgaste Uber.</div>
+      <div className="formula-substituted">Ingreso = {fmtMXN(R.grossPerTrip)} − {fmtMXN(R.platformCommission,2)} − impuesto {fmtMXN(R.taxAmountPerTrip,2)} ({R.taxRegime==='gross'?'bruto':R.taxRegime==='net'?'utilidad':'RESICO'}) = {fmtMXN(R.netRevenuePerTrip,2)} · Costo var = {fmtMXN(R.variableCostPerTrip,2)} · <strong>Contribución = {fmtMXN(R.netContributionPerTrip,2)}/viaje</strong></div></div>
 
     <div className="formula-block"><div className="formula-name">7 · Punto de equilibrio (margen de contribución)</div>
       <div className="formula-eq">E <span className="op">=</span><span className="frac"><span>C<sub>fijos</sub></span><span>Contrib<sub>viaje</sub></span></span></div>
@@ -1784,6 +2017,13 @@ const Formulas = ({ R, inputs }) => {
         <div className="formula-substituted">$/km = {fmtMXN(R.tcoTotal)} ÷ {fmtN(R.totalKmHorizon)} km = <strong>{fmtMXN(R.costPerKm,2)}/km</strong></div></div>
     )}
 
+    {R.insuranceMode==='pctOfValue' && (
+      <div className="formula-block"><div className="formula-name">16-bis · Seguro como % del valor</div>
+        <div className="formula-eq">Prima<sub>año y</sub> <span className="op">=</span> p<sub>seg</sub> <span className="op">×</span> V<sub>inicio año y</sub></div>
+        <div className="formula-where"><em>p<sub>seg</sub></em> = {fmtPct(R.insurancePctOfValue,1)}/año del valor asegurado. Como el auto se deprecia, la prima BAJA cada año (realista para cobertura amplia, FEATURE 3). El KPI de seguro muestra el valor del año 1.</div>
+        <div className="formula-substituted">Prima año 1 = {fmtPct(R.insurancePctOfValue,1)} × {fmtMXN(inputs.carPrice)} = {fmtMXN(R.insurancePctOfValue*inputs.carPrice)}/año = <strong>{fmtMXN(R.monthlyIns)}/mes</strong> (declina con la depreciación)</div></div>
+    )}
+
     {R.chargingHoursPerDay > 0 && (
       <div className="formula-block"><div className="formula-name">17 · Tiempo de carga eléctrica diario</div>
         <div className="formula-eq">t<sub>carga</sub> <span className="op">=</span><span className="frac"><span>km<sub>diarios</sub> / η<sub>eléc</sub></span><span>P<sub>cargador</sub></span></span></div>
@@ -1809,6 +2049,11 @@ const SOURCE_LABELS = {
   condition:'Condición (nuevo/usado)', odometerKm:'Kilometraje', repairReserveAnnual:'Reserva de reparaciones',
   depreciationMethod:'Método de depreciación', firstYearDepreciation:'Caída 1er año', sellingCostPct:'Costo de venta',
   interestRate:'Tasa de crédito', acquisitionFees:'Gastos de adquisición',
+  // FEATURE 1/2/3
+  insuranceMode:'Modo de seguro', insurancePctOfValue:'Seguro (% del valor)',
+  taxRegime:'Régimen fiscal Uber', resicoRate:'Retención RESICO',
+  financeType:'Tipo de financiamiento', balloonPct:'Valor residual (globo)',
+  leaseMonthly:'Renta de arrendamiento', leaseDownPayment:'Pago inicial arrendamiento',
 };
 
 // ============================================================================
