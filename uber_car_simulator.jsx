@@ -1663,7 +1663,7 @@ const Dashboard = ({ R, inputs }) => {
   const cumSpendChart = R.cashflow.map(r => ({ year:r.year, 'Auto / crédito':r.cCar, 'Combustible':r.cEnergy, 'Seguro + refrendo':r.cInsRef, 'Mantenimiento':r.cMaint, 'Otros':r.cOther }));
   const fuelName = inputs.vehicleType==='electric' ? 'Energía eléctrica' : (inputs.vehicleType==='diesel' ? 'Diésel' : 'Combustible');
   const costBreakdown = [
-    inputs.purchaseMode!=='cash' && { name:'Mensualidad crédito', value:R.monthlyPayment, color:'#b8431f', tipo:'Fijo', dir:'Directo' },
+    inputs.purchaseMode!=='cash' && { name: R.isLease ? 'Renta mensual' : 'Mensualidad crédito', value:R.monthlyPayment, color:'#b8431f', tipo:'Fijo', dir:'Directo' },
     { name:fuelName, value:R.monthlyFuel, color:'#d65a30', tipo:'Variable', dir:'Directo' },
     { name:'Seguro', value:R.monthlyIns, color:'#a87819', tipo:'Fijo', dir:'Directo' },
     { name:'Refrendo/Tenencia', value:R.monthlyRefrendo, color:'#6b3d8a', tipo:'Fijo', dir:'Directo' },
@@ -1695,7 +1695,8 @@ const Dashboard = ({ R, inputs }) => {
         <div className="kpi-value mono">{fmtMXN(R.upfrontCash)}</div>
         <div className="kpi-sub">{inputs.purchaseMode==='cash'?'Pago de contado':inputs.purchaseMode==='hybrid'?'Mixto efectivo + crédito':`${fmtPct(R.cashPaid/inputs.carPrice,0)} enganche`}{R.oneTimeUberCosts>0 && ` + ${fmtMXN(R.oneTimeUberCosts)} trámites`}</div></div>
       {R.financed > 0 && (<>
-        <div className="kpi"><div className="kpi-label">Mensualidad <Info text={TIPS.monthlyPayment} /></div><div className="kpi-value mono">{fmtMXN(R.monthlyPayment)}</div><div className="kpi-sub">× {R.months} meses</div></div>
+        <div className="kpi"><div className="kpi-label">{R.isBalloon ? 'Mensualidad (con globo)' : 'Mensualidad'} <Info text={TIPS.monthlyPayment} /></div><div className="kpi-value mono">{fmtMXN(R.monthlyPayment)}</div><div className="kpi-sub">{R.isBalloon ? `× ${R.months} meses · menor por el residual` : `× ${R.months} meses`}</div></div>
+        {R.isBalloon && <div className="kpi accent"><div className="kpi-label">Pago final (globo) <Info text="Valor residual no amortizado que pagas (o refinancias) al final del plazo para quedarte el auto, o que saldas vendiéndolo." /></div><div className="kpi-value mono">{fmtMXN(R.balloonPayment)}</div><div className="kpi-sub">en el mes {R.months} · {fmtPct(R.balloonPct,0)} del financiado</div></div>}
         <div className="kpi"><div className="kpi-label">Costo total nominal (VF) <Info text={TIPS.vf} /></div><div className="kpi-value mono">{fmtMXN(R.fvTotal)}</div><div className="kpi-sub">Suma de TODO lo del crédito</div></div>
         <div className="kpi"><div className="kpi-label">Valor presente (VP) <Info text={TIPS.vp} /></div><div className="kpi-value mono">{fmtMXN(R.pvTotal)}</div><div className="kpi-sub">Equivalente en dinero de hoy</div></div>
         <div className="kpi accent"><div className="kpi-label">Costo del dinero <Info text={TIPS.timeValue} /></div><div className="kpi-value mono">{fmtMXN(R.timeValueOfMoney)}</div><div className="kpi-sub">Intereses: {fmtMXN(R.totalInterest)}</div></div>
@@ -1711,12 +1712,24 @@ const Dashboard = ({ R, inputs }) => {
 
     <div className="row-2">
       {R.amortRows.length > 0 ? (
-        <div className="card"><div className="card-title"><BarChart3 size={11} /> Amortización del crédito <Info text={TIPS.amortization} /></div>
+        <div className="card"><div className="card-title"><BarChart3 size={11} /> {R.isBalloon ? 'Amortización del crédito (con globo)' : 'Amortización del crédito'} <Info text={TIPS.amortization} /></div>
           <ResponsiveContainer width="100%" height={250}><ComposedChart data={amortChartData}>
             <CartesianGrid stroke="#e6dccc" strokeDasharray="2 4" /><XAxis dataKey="month" stroke="#7a6e5e" fontSize={11} /><YAxis stroke="#7a6e5e" fontSize={11} tickFormatter={v => `${(v/1000).toFixed(0)}k`} />
             <Tooltip formatter={v => fmtMXN(v)} contentStyle={{ background:'#fdfaf2', border:'1px solid #d9cdb7', borderRadius:3 }} /><Legend wrapperStyle={{ fontSize:11 }} />
             <Area type="monotone" dataKey="Capital" stackId="1" fill="#b8431f" stroke="#b8431f" fillOpacity={0.7} /><Area type="monotone" dataKey="Interés" stackId="1" fill="#a87819" stroke="#a87819" fillOpacity={0.6} /><Line type="monotone" dataKey="Saldo" stroke="#181410" strokeWidth={2} dot={false} />
-          </ComposedChart></ResponsiveContainer></div>
+          </ComposedChart></ResponsiveContainer>
+          {R.isBalloon && <p style={{ fontSize:12, color:'var(--muted)', marginTop:8, marginBottom:0 }}>La mensualidad es menor porque {fmtPct(R.balloonPct,0)} del financiado queda como <strong>pago final ("globo") de {fmtMXN(R.balloonPayment)}</strong> en el mes {R.months}; por eso el saldo no llega a cero al amortizar.</p>}</div>
+      ) : R.isLease ? (
+        <div className="card"><div className="card-title"><Wallet size={11} /> Arrendamiento (renta)</div>
+          <p style={{ fontSize:14, color:'var(--muted)', marginTop:0 }}>No es un crédito: <strong style={{ color:'var(--ink)' }}>rentas</strong> el auto por <strong style={{ color:'var(--ink)' }}>{fmtMXN(R.monthlyPayment)}/mes</strong>. No eres dueño, así que <strong>no hay reventa ni capital (equity)</strong> a tu favor.</p>
+          <table className="tbl" style={{ marginTop:6 }}><tbody>
+            <tr><td>Renta mensual</td><td className="num">{fmtMXN(R.monthlyPayment)}</td></tr>
+            <tr><td>Plazo del arrendamiento</td><td className="num">{R.months} meses</td></tr>
+            <tr><td>Enganche/depósito inicial</td><td className="num">{fmtMXN(R.cashPaid)}</td></tr>
+            {R.leaseKmPenaltyYear>0 && <tr><td>Penalización por exceso de km</td><td className="num neg">{fmtMXN(R.leaseKmPenaltyYear)}/año</td></tr>}
+            <tr><td>Capital acumulado (equity)</td><td className="num">{fmtMXN(0)}</td></tr>
+          </tbody></table>
+          <p style={{ fontSize:12, color:'var(--muted)', marginTop:8, marginBottom:0 }}>Seguro, gasolina y mantenimiento corren por tu cuenta como arrendatario.</p></div>
       ) : (
         <div className="card"><div className="card-title"><Wallet size={11} /> Compra en efectivo</div>
           <p style={{ fontSize:14, color:'var(--muted)', marginTop:0 }}>No hay financiamiento. Pagaste <strong style={{ color:'var(--ink)' }}>{fmtMXN(R.cashPaid)}</strong> al momento de la compra.</p>
@@ -2317,6 +2330,25 @@ const Report = ({ R, inputs, sources }) => {
   const incomePct = inputs.monthlyIncome > 0 ? R.monthlyTotalOperative / inputs.monthlyIncome : null;
   const energyName = inputs.vehicleType==='electric' ? 'Energía eléctrica' : (inputs.vehicleType==='diesel' ? 'Diésel' : 'Combustible');
 
+  // --- FEATURE: tipo de financiamiento y etiquetas legibles -----------------
+  // El reporte ya no asume crédito tradicional vs contado: arrendamiento (lease)
+  // y crédito con pago final (balloon) tienen narrativa propia.
+  const financeLabel = R.isLease ? 'Arrendamiento (renta)' : R.isBalloon ? 'Crédito con pago final (globo)' : (R.financed > 0 ? 'Crédito tradicional' : 'Contado');
+  const taxRegimeLabel = R.taxRegime==='gross' ? `Bruto/escolar (${fmtPct(R.taxRate,0)} de la tarifa)` : R.taxRegime==='net' ? `Sobre utilidad (${fmtPct(R.taxRate,0)})` : `RESICO (retención ${fmtPct(R.resicoRate,1)})`;
+  const insuranceModeLabel = R.insuranceMode==='pctOfValue' ? `% del valor (${fmtPct(R.insurancePctOfValue,1)}/año · baja al depreciarse)` : 'Monto fijo mensual';
+
+  // --- FEATURE: rango probable (Monte Carlo ligero, 800 escenarios) ---------
+  // Convierte la recomendación de punto-estimado a un rango optimista/probable/
+  // pesimista. 800 iteraciones es rápido y se recalcula sólo al cambiar inputs.
+  const mc = useMemo(() => { try { return runMonteCarlo(inputs, 800); } catch { return null; } }, [inputs]);
+  const MC_N = mc?.iterations || 800;
+
+  // --- FEATURE: impresión / Guardar PDF -------------------------------------
+  // No agrega dependencias: usa el diálogo de impresión del navegador. El bloque
+  // <style media="print"> de abajo oculta el chrome de la app para que salga como
+  // documento. Desde el diálogo el usuario elige "Guardar como PDF".
+  const handlePrint = () => { try { window.print(); } catch {} };
+
   // --- RECOMENDACIÓN (veredicto de asesor, no narrativa escolar) ------------
   const rec = (() => {
     if (R.isUberMode) {
@@ -2389,12 +2421,25 @@ ${rec.reasons.map(r => `- ${r}`).join('\n')}
 | Valor presente del costo (tasa ${fmtPct(R.discountAnnual,1)}) | ${fmtMXN(R.pvLifetimeCost)} |
 | Costo por depreciación | ${fmtMXN(R.depreciationCost)} |
 | Valor de reventa en ${yearEnd} | ${fmtMXN(R.actualSalePrice)} |
-${incomePct!=null ? `| Peso en tu ingreso | ${fmtPct(incomePct,1)} |\n` : ''}${R.financed>0 ? `\n## Financiamiento
+${incomePct!=null ? `| Peso en tu ingreso | ${fmtPct(incomePct,1)} |\n` : ''}${
+  R.isLease ? `\n## Arrendamiento
+- Renta de ${fmtMXN(R.monthlyPayment)}/mes por ${inputs.loanMonths} meses; NO eres dueño, no hay reventa ni depreciación a tu favor.
+- Enganche/depósito inicial ${fmtMXN(R.cashPaid)} (no recuperable).${R.leaseKmPenaltyYear>0 ? `\n- Penalización estimada por exceso de kilometraje: ${fmtMXN(R.leaseKmPenaltyYear)}/año.` : ''}
+- El seguro, la gasolina y el mantenimiento los sigues pagando tú como arrendatario.
+`
+  : R.isBalloon && R.financed>0 ? `\n## Financiamiento con pago final (globo)
+- Monto financiado ${fmtMXN(R.financed)} a ${fmtPct(inputs.interestRate,1)} por ${inputs.loanMonths} meses → mensualidad menor de ${fmtMXN(R.monthlyPayment)}/mes.
+- Valor residual no amortizado (${fmtPct(R.balloonPct,0)} del financiado) = **pago final de ${fmtMXN(R.balloonPayment)}** en el mes ${R.months} (lo pagas o refinancias para quedarte el auto, o lo vendes al cierre).
+- **CAT real ${fmtPct(R.cat,1)}** (tasa efectiva ${fmtPct(R.ear,1)}); intereses totales ${fmtMXN(R.totalInterest)} + apertura ${fmtMXN(R.openingFee)}.
+- ¿Financiar o pagar de contado? Δ valor presente = ${fmtMXN(R.financeVsCashPV)} → conviene **${R.financeVsCashPV>=0?'financiar':'pagar de contado'}**.
+`
+  : R.financed>0 ? `\n## Financiamiento
 - Monto financiado ${fmtMXN(R.financed)} a ${fmtPct(inputs.interestRate,1)} por ${inputs.loanMonths} meses → ${fmtMXN(R.monthlyPayment)}/mes.
 - **CAT real ${fmtPct(R.cat,1)}** (tasa efectiva ${fmtPct(R.ear,1)}); intereses totales ${fmtMXN(R.totalInterest)} + apertura ${fmtMXN(R.openingFee)}.
 - ¿Financiar o pagar de contado? Δ valor presente = ${fmtMXN(R.financeVsCashPV)} → conviene **${R.financeVsCashPV>=0?'financiar':'pagar de contado'}**.
 - VF nominal ${fmtMXN(R.fvTotal)} vs VP ${fmtMXN(R.pvTotal)} (costo del dinero ${fmtMXN(R.timeValueOfMoney)}).
-` : `\n## Pago\n- Compra de contado por ${fmtMXN(R.cashPaid)}. Costo de oportunidad de ese dinero en ${inputs.horizonYears} años a ${fmtPct(R.discountAnnual,1)}: ${fmtMXN(R.opportunityCostUpfront)}.\n`}
+`
+  : `\n## Pago\n- Compra de contado por ${fmtMXN(R.cashPaid)}. Costo de oportunidad de ese dinero en ${inputs.horizonYears} años a ${fmtPct(R.discountAnnual,1)}: ${fmtMXN(R.opportunityCostUpfront)}.\n`}
 ## Costo total de propiedad (${inputs.horizonYears} años)
 ${horizonBreakdown.map(b => `- ${b.name}: ${fmtMXN(b.total)}`).join('\n')}
 - **Gasto bruto total: ${fmtMXN(R.totalSpentGross)}**
@@ -2404,14 +2449,44 @@ ${R.isUberMode ? `\n## Operación en Uber
 - Contribución por viaje ${fmtMXN(R.netContributionPerTrip,2)}; equilibrio del proyecto ${fmtN(R.breakEvenTrips,0)} viajes/mes.
 - Intensidad: ${fmtFixed(R.weeklyDays)} días/sem · ${fmtFixed(R.hoursPerDay)} hrs/día · ${fmtFixed(R.hoursPerWeek)} hrs/sem.
 - Resultado neto del proyecto ${fmtMXN(R.netProjectResult)} · VPN ${fmtMXN(R.npvProject)}${isFinite(R.irrProject)?` · TIR ${fmtPct(R.irrProject,1)}`:''}.\n` : ''}
+${mc ? `\n## Rango probable (simulación de ${MC_N} escenarios)
+${R.isUberMode
+  ? `- Probabilidad de que el plan sea viable: **${fmtPct(mc.feasibleRate,1)}**.
+- Viajes/mes — optimista ${fmtN(mc.be.p10,0)} · probable ${fmtN(mc.be.p50,0)} · pesimista ${fmtN(mc.be.p90,0)}.
+- Resultado neto — pesimista ${fmtMXN(mc.net.p10)} · probable ${fmtMXN(mc.net.p50)} · optimista ${fmtMXN(mc.net.p90)}.`
+  : `- Resultado de liquidación — pesimista ${fmtMXN(mc.fp.p10)} · probable ${fmtMXN(mc.fp.p50)} · optimista ${fmtMXN(mc.fp.p90)}.
+- La dispersión la dominan la reventa (depreciación · factor de venta) y el costo de energía.`}
+` : ''}
 ## Supuestos clave
+- Tipo de financiamiento: ${financeLabel}.${R.isUberMode ? ` · Régimen fiscal del ingreso: ${taxRegimeLabel}.` : ''} · Seguro: ${insuranceModeLabel}.
 - Tasa de descuento (oportunidad): ${fmtPct(R.discountAnnual,1)} · Inflación de costos: ${fmtPct(R.generalInflation,1)}/año.
 - Depreciación: método ${inputs.depreciationMethod} a ${fmtPct(inputs.depreciationRate,0)}/año · factor de reventa ${inputs.salesFactor.toFixed(2)}× · costo de venta ${fmtPct(R.sellingCostPct,1)}.
 ${R.totalRepairReserve>0 ? `- Reserva de reparaciones acumulada en el horizonte: ${fmtMXN(R.totalRepairReserve)}.\n` : ''}- Generado por Auto·Pilot. Valida precios y tasas con fuentes oficiales (fabricante, AMDA, Profeco, CFE, banco).
 `;
   const copyReport = () => { const blob = new Blob([md], { type:'text/markdown' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `analisis_${car.replace(/[^a-z0-9]+/gi,'_').toLowerCase()}.md`; a.click(); URL.revokeObjectURL(url); };
+  // CSS de impresión: oculta el chrome de la app, lleva la columna principal a
+  // ancho completo, quita el fondo fijo y evita cortar tablas/KPIs entre páginas.
+  // Así "Guardar como PDF" desde el diálogo produce un documento limpio.
+  const printCss = `
+    @media print {
+      .sidebar, .tabs { display:none !important; }
+      .layout { display:block !important; grid-template-columns:1fr !important; }
+      .main { padding:0 !important; }
+      .app-root::before { display:none !important; }
+      .app-root, .layout, .main { background:#fff !important; }
+      .report-body { max-width:none !important; box-shadow:none !important; border:none !important; padding:0 !important; }
+      .report-noprint { display:none !important; }
+      tr, .formula-block, .kpi { break-inside:avoid; page-break-inside:avoid; }
+      table, .card { break-inside:auto; }
+      h1, h2 { break-after:avoid; page-break-after:avoid; }
+      @page { margin:16mm 14mm; }
+    }
+  `;
   const glance = [
     { k:'Precio del vehículo', v:fmtMXN(inputs.carPrice) },
+    { k:'Tipo de financiamiento', v:financeLabel },
+    R.isLease && { k:'Renta mensual', v:`${fmtMXN(R.monthlyPayment)}/mes` },
+    R.isBalloon && { k:`Pago final (globo) en mes ${R.months}`, v:fmtMXN(R.balloonPayment) },
     { k:'Desembolso inicial (día 1)', v:fmtMXN(R.upfrontCash) },
     { k:'Costo mensual de tenerlo', v:fmtMXN(R.monthlyTotalOperative) },
     { k:'Costo total de propiedad (TCO)', v:fmtMXN(R.tcoTotal), strong:true },
@@ -2419,11 +2494,14 @@ ${R.totalRepairReserve>0 ? `- Reserva de reparaciones acumulada en el horizonte:
     { k:'Costo anual equivalente (CAE)', v:`${fmtMXN(R.eac)}/año`, strong:true },
     { k:'Costo por kilómetro', v:isFinite(R.costPerKm)?fmtMXN(R.costPerKm,2):'—' },
     { k:'Valor presente del costo', v:fmtMXN(R.pvLifetimeCost) },
-    { k:'Costo por depreciación', v:fmtMXN(R.depreciationCost) },
-    { k:`Reventa esperada en ${yearEnd}`, v:fmtMXN(R.actualSalePrice) },
-  ];
+    { k:'Costo por depreciación', v:R.isLease ? 'No aplica (no eres dueño)' : fmtMXN(R.depreciationCost) },
+    { k:`Reventa esperada en ${yearEnd}`, v:R.isLease ? 'Sin reventa (arrendamiento)' : fmtMXN(R.actualSalePrice) },
+    R.isUberMode && { k:'Régimen fiscal del ingreso', v:taxRegimeLabel },
+    { k:'Modo de seguro', v:insuranceModeLabel },
+  ].filter(Boolean);
   return (<div className="card report-body" style={{ padding:'40px 50px' }}>
-    <div style={{ display:'flex', justifyContent:'space-between', marginBottom:24, alignItems:'center' }}><span className="pill accent">Análisis de decisión</span><button className="btn outline" onClick={copyReport}><Download size={11} /> Descargar .md</button></div>
+    <style media="print">{printCss}</style>
+    <div className="report-noprint" style={{ display:'flex', justifyContent:'space-between', marginBottom:24, alignItems:'center', gap:8, flexWrap:'wrap' }}><span className="pill accent">Análisis de decisión</span><div style={{ display:'flex', gap:8 }}><button className="btn outline" onClick={handlePrint}><FileText size={11} /> Imprimir / Guardar PDF</button><button className="btn outline" onClick={copyReport}><Download size={11} /> Descargar .md</button></div></div>
     <h1>{R.isUberMode ? 'Comprar un auto y pagarlo con Uber' : 'Comprar un auto: ¿conviene y cuánto cuesta?'}</h1>
     <div style={{ fontFamily:'Manrope', fontSize:13, color:'var(--muted)', letterSpacing:'0.05em', textTransform:'uppercase' }}>{isUsed?'Usado/seminuevo':'Nuevo'} · {car} · {vehicleLabel} · {city} · 2026–{yearEnd}</div>
     {inputs.carDescription && <p style={{ fontSize:13, color:'var(--muted)', marginTop:6 }}>{inputs.carDescription}{carAge>0 ? ` · Modelo ${inputs.carYear} (≈${carAge} ${carAge===1?'año':'años'}${inputs.odometerKm>0?`, ${fmtN(inputs.odometerKm)} km`:''}).` : ` · Modelo ${inputs.carYear} (nuevo).`}</p>}
@@ -2442,7 +2520,16 @@ ${R.totalRepairReserve>0 ? `- Reserva de reparaciones acumulada en el horizonte:
 
     {inputs.carJustification && (<><h2>Por qué este vehículo</h2><p>{inputs.carJustification}</p></>)}
 
-    {R.financed>0 ? (<>
+    {R.isLease ? (
+      <><h2>Arrendamiento (renta)</h2>
+      <p>No estás comprando el auto: lo <strong>rentas</strong> por <strong>{fmtMXN(R.monthlyPayment)}/mes</strong> durante {inputs.loanMonths} meses. Como arrendatario <strong>no eres dueño</strong>, así que no hay reventa ni depreciación a tu favor al final del plazo. El enganche/depósito inicial de {fmtMXN(R.cashPaid)} normalmente <strong>no es recuperable</strong>.</p>
+      <p>La renta cubre el uso del vehículo, pero el <strong>seguro, la gasolina y el mantenimiento los sigues pagando tú</strong>{R.leaseKmPenaltyYear>0 ? <>. Además, con tu kilometraje proyectado se estima una <strong>penalización por exceso de km de {fmtMXN(R.leaseKmPenaltyYear)}/año</strong></> : ''}. Por eso, en arrendamiento el costo total se mide por lo que pagas (renta + operación), sin recuperación por venta.</p></>
+    ) : R.isBalloon && R.financed>0 ? (
+      <><h2>Financiamiento con pago final (globo)</h2>
+      <p>Financias {fmtMXN(R.financed)} a una tasa de lista de {fmtPct(inputs.interestRate,1)} por {inputs.loanMonths} meses. Como dejas un <strong>valor residual</strong> ({fmtPct(R.balloonPct,0)} del financiado) sin amortizar, tu mensualidad baja a <strong>{fmtMXN(R.monthlyPayment)}</strong>, pero queda un <strong>pago final ("globo") de {fmtMXN(R.balloonPayment)}</strong> en el mes {R.months}. Ese pago lo cubres (o refinancias) para quedarte el auto, o lo saldas vendiéndolo al cierre del plazo.</p>
+      <p>La tasa de lista no es el costo real: el <strong>CAT es {fmtPct(R.cat,1)}</strong> (incluye la comisión de apertura) y la tasa efectiva anual es {fmtPct(R.ear,1)}. En total pagarás {fmtMXN(R.totalInterest)} de intereses más {fmtMXN(R.openingFee)} de apertura.</p>
+      <p style={{ background: R.financeVsCashPV>=0?'#e7f0e4':'#f7e6e0', padding:'12px 16px', borderRadius:4, fontSize:13.5 }}><strong>¿Financiar o pagar de contado?</strong> Comparando en valor de hoy (tasa de oportunidad {fmtPct(R.discountAnnual,1)}), {R.financeVsCashPV>=0 ? <>te conviene <strong style={{ color:'var(--pos)' }}>financiar</strong>: conservar tu dinero invertido vale {fmtMXN(R.financeVsCashPV)} más que pagar todo de golpe.</> : <>te conviene <strong style={{ color:'var(--neg)' }}>pagar de contado</strong>: financiar cuesta {fmtMXN(Math.abs(R.financeVsCashPV))} más en valor presente.</>}</p></>
+    ) : R.financed>0 ? (<>
       <h2>Análisis del financiamiento</h2>
       <p>Financias {fmtMXN(R.financed)} a una tasa de lista de {fmtPct(inputs.interestRate,1)} por {inputs.loanMonths} meses, lo que da una mensualidad de <strong>{fmtMXN(R.monthlyPayment)}</strong>. Pero la tasa de lista no es el costo real: el <strong>CAT es {fmtPct(R.cat,1)}</strong> (incluye la comisión de apertura) y la tasa efectiva anual es {fmtPct(R.ear,1)}. En total pagarás {fmtMXN(R.totalInterest)} de intereses más {fmtMXN(R.openingFee)} de apertura.</p>
       <p style={{ background: R.financeVsCashPV>=0?'#e7f0e4':'#f7e6e0', padding:'12px 16px', borderRadius:4, fontSize:13.5 }}><strong>¿Financiar o pagar de contado?</strong> Comparando en valor de hoy (tasa de oportunidad {fmtPct(R.discountAnnual,1)}), {R.financeVsCashPV>=0 ? <>te conviene <strong style={{ color:'var(--pos)' }}>financiar</strong>: conservar tu dinero invertido vale {fmtMXN(R.financeVsCashPV)} más que pagar todo de golpe.</> : <>te conviene <strong style={{ color:'var(--neg)' }}>pagar de contado</strong>: financiar cuesta {fmtMXN(Math.abs(R.financeVsCashPV))} más en valor presente.</>}</p>
@@ -2496,6 +2583,32 @@ ${R.totalRepairReserve>0 ? `- Reserva de reparaciones acumulada en el horizonte:
       <tr><td>Resultado de liquidación (venta − deuda)</td><td className={`num ${R.liquidationPosition>=0?'pos':'neg'}`}>{fmtMXN(R.liquidationPosition)}</td></tr>
       {R.isUberMode && <tr><td><strong>Resultado neto del proyecto</strong></td><td className={`num ${R.netProjectResult>=0?'pos':'neg'}`}><strong>{fmtMXN(R.netProjectResult)}</strong></td></tr>}
     </tbody></table>
+    {mc && (<>
+      <h2>Rango probable (simulación de {fmtN(MC_N,0)} escenarios)</h2>
+      <p style={{ fontSize:13 }}>La recomendación de arriba es el <strong>caso base</strong> (un solo escenario). Aquí movemos al azar las variables inciertas (tarifa, combustible, comisión, mantenimiento, seguro, depreciación…) {fmtN(MC_N,0)} veces para ver el <strong>rango</strong> en que caen los resultados: optimista (P10), probable (P50) y pesimista (P90).</p>
+      {R.isUberMode ? (<>
+        <div className="kpi-grid" style={{ marginBottom:14 }}>
+          <div className="kpi accent"><div className="kpi-label">Probabilidad de éxito</div><div className="kpi-value mono" style={{ color: mc.feasibleRate>=0.5?'var(--pos)':'var(--neg)' }}>{fmtPct(mc.feasibleRate,1)}</div><div className="kpi-sub">de {fmtN(MC_N,0)} escenarios el plan es viable</div></div>
+          <div className="kpi"><div className="kpi-label">Viajes/mes (equilibrio)</div><div className="kpi-value mono">{fmtN(mc.be.p50,0)}</div><div className="kpi-sub">Optimista {fmtN(mc.be.p10,0)} · Pesimista {fmtN(mc.be.p90,0)}</div></div>
+          <div className="kpi accent"><div className="kpi-label">Resultado neto del proyecto</div><div className="kpi-value mono" style={{ color: mc.net.p50>=0?'var(--pos)':'var(--neg)' }}>{fmtMXN(mc.net.p50)}</div><div className="kpi-sub">Pesimista {fmtMXN(mc.net.p10)} · Optimista {fmtMXN(mc.net.p90)}</div></div>
+        </div>
+        <table className="tbl"><thead><tr><th>Escenario</th><th className="num">Viajes/mes</th><th className="num">Resultado neto</th></tr></thead><tbody>
+          <tr><td style={{ fontFamily:'Manrope', fontWeight:500 }}>Optimista (P10)</td><td className="num">{fmtN(mc.be.p10,0)}</td><td className={`num ${mc.net.p90>=0?'pos':'neg'}`}>{fmtMXN(mc.net.p90)}</td></tr>
+          <tr style={{ background:'var(--bg-2)' }}><td style={{ fontFamily:'Manrope', fontWeight:700 }}>Probable (P50)</td><td className="num"><strong>{fmtN(mc.be.p50,0)}</strong></td><td className={`num ${mc.net.p50>=0?'pos':'neg'}`}><strong>{fmtMXN(mc.net.p50)}</strong></td></tr>
+          <tr><td style={{ fontFamily:'Manrope', fontWeight:500 }}>Pesimista (P90)</td><td className="num">{fmtN(mc.be.p90,0)}</td><td className={`num ${mc.net.p10>=0?'pos':'neg'}`}>{fmtMXN(mc.net.p10)}</td></tr>
+        </tbody></table>
+        <p style={{ fontSize:13, marginTop:10 }}>{R.feasible
+          ? <>Aunque el caso base es viable trabajando ~{fmtFixed(R.hoursPerWeek)} hrs/semana, en el <strong>10% peor</strong> de los escenarios necesitarías acercarte a <strong>{fmtN(mc.be.p90,0)} viajes/mes</strong> y el resultado neto podría caer a <strong>{fmtMXN(mc.net.p10)}</strong>. El plan funciona en ~<strong>{fmtPct(mc.feasibleRate,0)}</strong> de los casos simulados.</>
+          : <>El caso base no es viable; la simulación lo confirma: el plan sólo funciona en ~<strong>{fmtPct(mc.feasibleRate,0)}</strong> de los escenarios, con un equilibrio probable de <strong>{fmtN(mc.be.p50,0)} viajes/mes</strong>. Ajusta los supuestos antes de decidir.</>}</p>
+      </>) : (<>
+        <div className="kpi-grid" style={{ marginBottom:14 }}>
+          <div className="kpi accent"><div className="kpi-label">Resultado de liquidación (probable)</div><div className="kpi-value mono" style={{ color: mc.fp.p50>=0?'var(--pos)':'var(--neg)' }}>{fmtMXN(mc.fp.p50)}</div><div className="kpi-sub">Pesimista {fmtMXN(mc.fp.p10)} · Optimista {fmtMXN(mc.fp.p90)}</div></div>
+          <div className="kpi"><div className="kpi-label">Rango (P10 — P90)</div><div className="kpi-value mono" style={{ fontSize:18 }}>{fmtMXN(mc.fp.p10)} — {fmtMXN(mc.fp.p90)}</div><div className="kpi-sub">dispersión del resultado financiero</div></div>
+        </div>
+        <p style={{ fontSize:13 }}>En modo de uso personal no hay punto de equilibrio: el riesgo del resultado financiero lo dominan la <strong>reventa</strong> (depreciación × factor de venta) y el <strong>costo de energía/combustible</strong>. El resultado de liquidación probable es <strong>{fmtMXN(mc.fp.p50)}</strong>, con un rango entre <strong>{fmtMXN(mc.fp.p10)}</strong> (pesimista) y <strong>{fmtMXN(mc.fp.p90)}</strong> (optimista).</p>
+      </>)}
+    </>)}
+
     <h2>Escenarios de liquidación</h2>
     <table className="tbl"><thead><tr><th>Caso</th><th>Condición</th><th className="num">Resultado</th></tr></thead><tbody>
       <tr style={{ background: R.remainingDebt===0?'var(--bg-2)':'transparent' }}><td>Crédito ya pagado</td><td style={{ fontFamily:'Manrope' }}>Horizonte ≥ plazo del crédito</td><td className="num pos">{R.remainingDebt===0 ? `Ganancia: ${fmtMXN(R.actualSalePrice)}` : '—'}</td></tr>
@@ -2504,6 +2617,10 @@ ${R.totalRepairReserve>0 ? `- Reserva de reparaciones acumulada en el horizonte:
     </tbody></table>
     <h2>Supuestos clave del análisis</h2>
     <table className="tbl"><tbody>
+      <tr><td>Tipo de financiamiento</td><td className="num">{financeLabel}</td></tr>
+      {R.isBalloon && <tr><td>Pago final (globo)</td><td className="num">{fmtMXN(R.balloonPayment)} en mes {R.months}</td></tr>}
+      {R.isUberMode && <tr><td>Régimen fiscal del ingreso</td><td className="num">{taxRegimeLabel}</td></tr>}
+      <tr><td>Modo de seguro</td><td className="num">{insuranceModeLabel}</td></tr>
       <tr><td>Tasa de descuento (costo de oportunidad)</td><td className="num">{fmtPct(R.discountAnnual,1)} anual</td></tr>
       <tr><td>Inflación general de costos</td><td className="num">{fmtPct(R.generalInflation,1)}/año</td></tr>
       <tr><td>Método de depreciación</td><td className="num" style={{ textTransform:'capitalize' }}>{inputs.depreciationMethod} · {fmtPct(inputs.depreciationRate,0)}/año</td></tr>
