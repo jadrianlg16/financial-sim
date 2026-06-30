@@ -298,6 +298,13 @@ const TIPS = {
   // --- FEATURE 3: seguro como % del valor ---
   insuranceMode: '<strong>Cómo cobras el seguro.</strong><br/><strong>Monto fijo:</strong> una prima mensual plana que tú capturas.<br/><strong>% del valor:</strong> la prima anual es un porcentaje del valor del auto, así que BAJA cada año conforme el auto se deprecia (realista para cobertura amplia, donde la prima sigue el valor asegurado).',
   insurancePctOfValue: '<strong>Seguro como % del valor/año.</strong> Prima anual como porcentaje del valor depreciado del auto. La cobertura amplia en México suele rondar 3% a 6% del valor asegurado al año; declina conforme el auto pierde valor.',
+  // --- NUEVOS: depreciación de usados, garantía, carga pública, pérdida total ---
+  usedDepreciationRate: '<strong>Depreciación de usados (saldo decreciente).</strong> Un auto usado pierde un % MENOR de su valor cada año que uno nuevo: la curva ya se aplanó. Aquí defines esa tasa anual (típico 10-15%); se afina un poco más con la antigüedad del auto y queda acotada entre 4% y 30%. Sólo aplica cuando la condición es "Usado".',
+  warrantyYearsRemaining: '<strong>Años de garantía restantes.</strong> Mientras el auto siga en garantía, las reparaciones mayores las cubre el fabricante, así que la <strong>reserva de reparaciones</strong> de esos años se pone en ≈0. Pasada la garantía, la reserva vuelve a aplicar y crece con la edad. Autos nuevos suelen traer 3-5 años; los usados normalmente 0.',
+  publicChargeFraction: '<strong>Fracción de carga pública.</strong> Parte de la energía que cargas en estaciones públicas (más caras) en lugar de en casa. El precio efectivo del kWh mezcla tu tarifa casera y la pública según esta fracción. Sólo afecta autos eléctricos o híbridos enchufables.',
+  publicChargePrice: '<strong>Precio de carga pública.</strong> Costo por kWh en cargadores públicos/comerciales, normalmente bastante más alto que la tarifa doméstica de CFE. Se mezcla con tu precio casero según la fracción de carga pública.',
+  theftLossProbAnnual: '<strong>Riesgo de pérdida total / robo (anual).</strong> Probabilidad de que en un año el auto se pierda por completo (robo o siniestro total). En la simulación Monte Carlo se acumula sobre el horizonte; si ocurre, el seguro de cobertura amplia paga aproximadamente el valor depreciado menos el deducible y se sustituye la reventa por ese pago. Sólo afecta el análisis de riesgo, no el caso base.',
+  theftDeductiblePct: '<strong>Deducible de cobertura amplia.</strong> Porcentaje del valor asegurado que NO te paga la aseguradora en caso de pérdida total (tú lo absorbes). En México la cobertura amplia suele tener deducibles de 3% a 10% para robo/pérdida total.',
 };
 
 // Nombre a mostrar del auto: usa el preset, o el nombre importado por IA si es custom. (audit fix)
@@ -404,14 +411,30 @@ function equivalentAnnualCost(pvCost, annualRate, years) {
   return pvCost / annuityFactor;
 }
 
+// FEATURE 1(a) — tasa de depreciación EFECTIVA según condición/edad del auto.
+// Los usados deprecian MÁS LENTO en % (la curva se aplana con la edad): se usa
+// usedDepreciationRate (default 0.12) en lugar de la tasa de auto nuevo, y se
+// afina un poco con la antigüedad actual (2026 − carYear) restando 0.5 pts por
+// cada año de edad. La tasa resultante queda acotada a [0.04, 0.30] para no
+// degenerar. Los autos NUEVOS conservan exactamente su tasa de lista (sin cambio).
+function effectiveDepRate(I) {
+  const base = clamp(I.depreciationRate, 0, 0.95);
+  if (I.vehicleCondition !== 'used') return base;             // auto nuevo: comportamiento idéntico
+  let usedRate = clamp(I.usedDepreciationRate != null ? I.usedDepreciationRate : 0.12, 0, 0.95);
+  const ageYears = Math.max(0, 2026 - num(I.carYear, 2026));  // antigüedad actual
+  usedRate -= 0.005 * ageYears;                               // se aplana ~0.5 pts/año de edad
+  return clamp(usedRate, 0.04, 0.30);                         // bien acotada
+}
+
 // Depreciación con MÉTODO seleccionable (el activo nunca vale menos de 0):
 //   - 'declining'  Saldo decreciente / geométrico:  V_n = V0·(1−d)^n   [realista, default]
 //   - 'straight'   Lineal sobre precio original:     V_n = V0·(1−d·n)
 //   - 'realistic'  Caída fuerte el 1er año y luego saldo decreciente:
 //                  V_1 = V0·(1−d1);  V_n = V_1·(1−d)^(n−1)
+// La tasa d ya viene ajustada por condición/edad (FEATURE 1a: usados deprecian más lento).
 function depreciatedValue(price, I, year) {
   if (year <= 0) return price;
-  const d = clamp(I.depreciationRate, 0, 0.95);
+  const d = effectiveDepRate(I);
   const method = I.depreciationMethod || 'declining';
   let v;
   if (method === 'straight') {
@@ -431,7 +454,14 @@ function calculateEnergyCost(I, monthlyKm, yearOffset = 0) {
   const electricityInflation = Math.max(-0.95, num(I.electricityInflation));
   const fuelInflated = nonNegative(I.fuelPrice) * Math.pow(1 + fuelInflation, yearOffset);
   const dieselInflated = nonNegative(I.dieselPrice) * Math.pow(1 + fuelInflation, yearOffset);
-  const elecInflated = nonNegative(I.electricityPrice) * Math.pow(1 + electricityInflation, yearOffset);
+  // FEATURE 2 — split de carga pública vs. casera para el manejo eléctrico.
+  // Una fracción de la energía se carga en estaciones públicas (más caras). El
+  // precio efectivo mezcla casa y público; ambos siguen la misma inflación
+  // eléctrica (consistente). Sólo aplica a eléctrico / híbrido enchufable.
+  const elecHomeInflated = nonNegative(I.electricityPrice) * Math.pow(1 + electricityInflation, yearOffset);
+  const publicFrac = clamp(I.publicChargeFraction, 0, 1);
+  const elecPublicInflated = nonNegative(I.publicChargePrice) * Math.pow(1 + electricityInflation, yearOffset);
+  const elecInflated = elecHomeInflated * (1 - publicFrac) + elecPublicInflated * publicFrac; // $/kWh efectivo
   const kmpl = positive(I.kmpl, 1);
   const kmPerKwh = positive(I.kmPerKwh, 1);
   const chargerPowerKw = positive(I.chargerPowerKw, 1);
@@ -717,7 +747,14 @@ function calculate(I) {
   const baseAgeYears = Math.max(0, 2026 - num(I.carYear, 2026));
   const repairBase = nonNegative(I.repairReserveAnnual);
   const repairGrowth = nonNegative(I.repairGrowth != null ? I.repairGrowth : 0.15);
-  const repairReserveYear = (y) => repairBase * Math.pow(1 + repairGrowth, baseAgeYears + (y - 1));
+  // FEATURE 1(b) — ventana de garantía: mientras el año y cae dentro de la garantía
+  // (y ≤ warrantyYearsRemaining) las reparaciones mayores las cubre el fabricante,
+  // así que la reserva de ese año se suprime (≈0). Pasada la garantía vuelve a
+  // aplicar y crece con la edad como hoy. Nuevos traen garantía (default 3); usados 0.
+  const warrantyYearsRemaining = nonNegative(I.warrantyYearsRemaining);
+  const repairReserveYear = (y) => (y <= warrantyYearsRemaining)
+    ? 0
+    : repairBase * Math.pow(1 + repairGrowth, baseAgeYears + (y - 1));
 
   const loanMonthsInYear = (y) => { if (months === 0) return 0; const overlapEnd = Math.min(y*12, months); return Math.max(0, overlapEnd - (y-1)*12); };
   // FEATURE 2 — meses de RENTA del arrendamiento dentro del año y (limitado por plazo y horizonte).
@@ -839,7 +876,7 @@ function calculate(I) {
     isEV, usableKwh, dailyRangeKm, evRangeShortfall, chargingExceedsAvailableHours,
     yearOneEnergy, energyByYear, wearMultiplier, effectiveMaintenance, avgMonthlyEnergy, totalProjectCost, totalSpentGross,
     // Ingeniería económica + variables nuevas
-    tradeInValue, acquisitionFees, sellingCostPct, grossSalePrice, generalInflation, totalRepairReserve, baseAgeYears,
+    tradeInValue, acquisitionFees, sellingCostPct, grossSalePrice, generalInflation, totalRepairReserve, baseAgeYears, warrantyYearsRemaining,
     discountAnnual, npvProject, irrProject, pvLifetimeCost, eac, tcoTotal, tcoPerYear, totalKmHorizon, costPerKm,
     depreciationCost, financingCost, ear, cat, financeVsCashPV, pvFinancedPath, pvCashPath, opportunityCostUpfront,
     // FEATURE 1 (impuestos) · FEATURE 2 (financiamiento) · FEATURE 3 (seguro)
@@ -905,6 +942,16 @@ function randomNormal(mean, std) {
 function runMonteCarlo(inputs, iterations = 3000) {
   const results = [];
   const jitter = (val, pct, lo = -Infinity, hi = Infinity) => Math.min(hi, Math.max(lo, randomNormal(val, Math.abs(val) * pct)));
+  // FEATURE 3 — riesgo de pérdida total / robo (write-off) sobre el horizonte.
+  // Probabilidad anual p → acumulada en N años: pTL = 1−(1−p)^N (acotada [0,0.95]).
+  // En un arrendamiento no eres dueño del activo, así que el evento no cambia tu
+  // recuperación terminal (ya es 0): se desactiva para no distorsionar la cola.
+  const horizonYears = Math.max(1, Math.round(positive(inputs.horizonYears, 1)));
+  const pAnnual = clamp(inputs.theftLossProbAnnual, 0, 0.5);
+  const isLeaseMC = (inputs.purchaseMode === 'credit' && inputs.financeType === 'lease');
+  const totalLossProb = (isLeaseMC || pAnnual <= 0) ? 0 : clamp(1 - Math.pow(1 - pAnnual, horizonYears), 0, 0.95);
+  // Deducible de cobertura amplia (fracción del valor asegurado que NO te pagan).
+  const deductiblePct = clamp(inputs.theftDeductiblePct != null ? inputs.theftDeductiblePct : 0.05, 0, 0.5);
   for (let i = 0; i < iterations; i++) {
     const sim = { ...inputs,
       // Ingreso / plataforma
@@ -928,7 +975,22 @@ function runMonteCarlo(inputs, iterations = 3000) {
       salesFactor: Math.max(0.3, jitter(inputs.salesFactor, 0.12)),
     };
     const c = calculate(sim);
-    results.push({ be:c.breakEvenTrips, feasible:c.feasible?1:0, finalPos:c.liquidationPosition, net:c.netProjectResult });
+    let finalPos = c.liquidationPosition;
+    let net = c.netProjectResult;
+    // FEATURE 3 — ¿hubo pérdida total en esta iteración? (sólo si eres dueño)
+    if (c.owned && totalLossProb > 0 && Math.random() < totalLossProb) {
+      // Pago del seguro ≈ valor asegurado depreciado en un punto representativo del
+      // horizonte (acotamos a NO superar el valor de mercado terminal, para que la
+      // pérdida total sea un RIESGO y no un premio) menos el deducible. La aseguradora
+      // liquida la deuda viva; el resto te queda. Sustituye la reventa por el pago.
+      const midValue = depreciatedValue(c.carPrice, sim, Math.max(1, Math.round(horizonYears / 2)));
+      const insuredValue = Math.min(midValue, c.valueAtEnd); // no premiar el siniestro
+      const payout = Math.max(0, insuredValue * (1 - deductiblePct));
+      const tlRecovery = payout - c.remainingDebt;          // recuperación terminal bajo pérdida total
+      net = net - c.terminalRecovery + tlRecovery;
+      finalPos = tlRecovery;
+    }
+    results.push({ be:c.breakEvenTrips, feasible:c.feasible?1:0, finalPos, net });
   }
   const beSorted = results.map(r=>r.be).filter(isFinite).sort((a,b)=>a-b);
   const fpSorted = results.map(r=>r.finalPos).sort((a,b)=>a-b);
@@ -942,8 +1004,9 @@ function runMonteCarlo(inputs, iterations = 3000) {
   return {
     feasibleRate,
     be: { p10:q(beSorted,0.1), p50:q(beSorted,0.5), p90:q(beSorted,0.9), mean: beSorted.length ? beSorted.reduce((a,b)=>a+b,0)/beSorted.length : NaN },
-    fp: { p10:q(fpSorted,0.1), p50:q(fpSorted,0.5), p90:q(fpSorted,0.9), mean: fpSorted.reduce((a,b)=>a+b,0)/fpSorted.length },
+    fp: { p10:q(fpSorted,0.1), p50:q(fpSorted,0.5), p90:q(fpSorted,0.9), mean: fpSorted.reduce((a,b)=>a+b,0)/Math.max(1,fpSorted.length) },
     net: { p10:q(netSorted,0.1), p50:q(netSorted,0.5), p90:q(netSorted,0.9), mean: netSorted.reduce((a,b)=>a+b,0)/Math.max(1,netSorted.length) },
+    totalLossProb, // FEATURE 3 — prob. acumulada de pérdida total en el horizonte (la Report la muestra)
     hist, iterations,
   };
 }
@@ -967,6 +1030,9 @@ const DEFAULT_INPUTS = {
   tripsPerHour:3, maxHoursPerDay:8, workDaysPerMonth:22, personalKmDaily:20, uberWearFactor:0.30,
   uberKmPerTrip:8,
   fuelPrice:24.5, dieselPrice:26.0, electricityPrice:4.2, fuelInflation:0.06, electricityInflation:0.04,
+  // Split de carga pública vs. casera (FEATURE 2). Sólo afecta eléctrico / híbrido enchufable.
+  // publicChargeFraction=0.15: 15% de la energía se carga en estaciones públicas (más caras).
+  publicChargeFraction:0.15, publicChargePrice:8.0,
   monthlyInsurance:2000, annualMaintenance:8000, monthlyRefrendo:500, dataPlan:400,
   // Modo de seguro (FEATURE 3). 'fixed' = monto plano (default). 'pctOfValue' = % anual del
   // valor depreciado del auto (baja con la depreciación; realista para cobertura amplia).
@@ -976,6 +1042,12 @@ const DEFAULT_INPUTS = {
   horizonYears:4, depreciationRate:0.20, salesFactor:1.0, monthlyIncome:0,
   // --- Ingeniería económica y variables de decisión (nuevas) ---
   vehicleCondition:'new', odometerKm:0,
+  // FEATURE 1(a) — tasa de depreciación para USADOS (más lenta en % que un auto nuevo).
+  usedDepreciationRate:0.12,
+  // FEATURE 1(b) — años de garantía restantes. Mientras y ≤ este valor, las reparaciones
+  // mayores las cubre el fabricante y la reserva de reparaciones se suprime. Nuevos: 3; usados: 0
+  // (lo ajustan applyCondition/applyCarPreset según la condición).
+  warrantyYearsRemaining:3,
   depreciationMethod:'declining', firstYearDepreciation:0.25,
   discountRate:0.105,            // costo de oportunidad (≈ CETES). Tasa para VPN/CAE.
   generalInflation:0.045,        // inflación anual de costos no-energéticos
@@ -984,6 +1056,9 @@ const DEFAULT_INPUTS = {
   tradeInValue:0,                // auto a cuenta
   acquisitionFees:0,             // placas/alta/ISAN/revisión/traspaso
   sellingCostPct:0,              // costo de venta al liquidar
+  // FEATURE 3 — riesgo de pérdida total / robo (write-off) modelado en Monte Carlo.
+  theftLossProbAnnual:0.015,     // prob. anual de pérdida total
+  theftDeductiblePct:0.05,       // deducible de cobertura amplia (% del valor asegurado)
 };
 
 // ----------------------------------------------------------------------------
@@ -1014,6 +1089,8 @@ Esquema EXACTO:
     "year": 2026,
     "condition": "new | used",
     "odometerKm": 0,
+    "usedDepreciationRate": 0.12,
+    "warrantyYearsRemaining": 3,
     "type": "gasoline | diesel | hybrid | electric",
     "plugInHybrid": false,
     "price": 280000,
@@ -1037,16 +1114,20 @@ Esquema EXACTO:
     "accessories": 100,
     "repairReserveAnnual": 0,
     "uberWearFactor": 0.30,
-    "uberKmPerTrip": 8
+    "uberKmPerTrip": 8,
+    "publicChargeFraction": 0.15,
+    "publicChargePrice": 8.0
   },
   "uber": { "taxRegime": "resico", "resicoRate": 0.025, "uberCommission": 0.25, "taxRate": 0.30 },
   "financing": { "financeType": "annuity", "balloonPct": 0.35, "leaseMonthly": 6500, "leaseDownPayment": 20000, "leaseTermMonths": 48, "leaseKmCapYear": 20000, "leaseExcessKmFee": 3 },
   "oneTime": { "toxicologyReport": 400, "uberCertification": 900, "acquisitionFees": 0 },
-  "projection": { "depreciationMethod": "declining", "depreciationRate": 0.20, "firstYearDepreciation": 0.25, "salesFactor": 1.0, "sellingCostPct": 0.0, "interestRate": 0.135 },
+  "projection": { "depreciationMethod": "declining", "depreciationRate": 0.20, "firstYearDepreciation": 0.25, "salesFactor": 1.0, "sellingCostPct": 0.0, "interestRate": 0.135, "theftLossProbAnnual": 0.015, "theftDeductiblePct": 0.05 },
   "sources": {
     "price": "URL fabricante o seminuevos (para usados, cita el precio de seminuevo del año y km)",
     "condition": "nuevo o usado según el precio cotizado",
     "odometerKm": "[ESTIMACIÓN] km típicos para ese año si es usado, si no 0",
+    "usedDepreciationRate": "[ESTIMACIÓN] si es usado, depreciación anual más lenta que un auto nuevo (típico 0.10-0.15)",
+    "warrantyYearsRemaining": "[ESTIMACIÓN] años de garantía de fábrica restantes (nuevos 3-5; usados normalmente 0)",
     "kmpl": "URL ficha técnica / EPA / fabricante",
     "plugInHybrid": "URL ficha técnica que confirme si es híbrido enchufable; si no aplica, null",
     "kmPerKwh": "URL si aplica, si no null",
@@ -1071,12 +1152,16 @@ Esquema EXACTO:
     "accessories": "[ESTIMACIÓN] cargador, soporte, etc. prorrateado",
     "uberWearFactor": "[ESTIMACIÓN] desgaste extra por uso intensivo 0.2-0.5",
     "uberKmPerTrip": "[ESTIMACIÓN] km promedio por viaje incl. traslado vacío (típico 6-12)",
+    "publicChargeFraction": "[ESTIMACIÓN] fracción de carga en estaciones públicas si es eléctrico/enchufable (0-0.3)",
+    "publicChargePrice": "URL/estimación precio por kWh en cargadores públicos (suele superar la tarifa CFE doméstica)",
     "depreciationMethod": "declining para autos (saldo decreciente); straight sólo si lo pide la tarea",
     "depreciationRate": "URL guía de depreciación / valor seminuevos (15-25% típico)",
     "firstYearDepreciation": "[ESTIMACIÓN] caída del 1er año si method=realistic (autos nuevos ~20-25%)",
     "salesFactor": "[ESTIMACIÓN] ajuste de reventa frente al valor calculado 0.7-1.1",
     "sellingCostPct": "[ESTIMACIÓN] costo de vender (comisión/traspaso) 0-5%",
     "interestRate": "URL banco — tasa de crédito (autos usados suelen ser más caros, 14-20%)",
+    "theftLossProbAnnual": "[ESTIMACIÓN] prob. anual de robo/pérdida total (INEGI/aseguradoras; típico 0.01-0.03)",
+    "theftDeductiblePct": "[ESTIMACIÓN] deducible de cobertura amplia para robo/pérdida total (3-10%)",
     "toxicologyReport": "URL costo antidoping / requisitos Uber MX",
     "uberCertification": "URL requisitos de registro Uber MX",
     "acquisitionFees": "[ESTIMACIÓN] placas/alta/ISAN/revisión/traspaso al comprar"
@@ -1114,6 +1199,12 @@ function applyImportedJson(json, currentInputs) {
       if (v.chargerPowerKw != null) merged.chargerPowerKw = +v.chargerPowerKw;
       if (v.condition === 'used' || v.condition === 'new') merged.vehicleCondition = v.condition;
       if (v.odometerKm != null) merged.odometerKm = +v.odometerKm;
+      // FEATURE 1 — depreciación de usados y garantía. Si el JSON no trae garantía,
+      // se infiere de la condición (usado=0, nuevo=3) para mantener la semántica.
+      if (v.usedDepreciationRate != null) merged.usedDepreciationRate = +v.usedDepreciationRate;
+      if (v.warrantyYearsRemaining != null) merged.warrantyYearsRemaining = +v.warrantyYearsRemaining;
+      else if (v.condition === 'used') merged.warrantyYearsRemaining = 0;
+      else if (v.condition === 'new') merged.warrantyYearsRemaining = 3;
       if (v.description) merged.carDescription = v.description;
       if (v.justification) merged.carJustification = v.justification;
     }
@@ -1132,6 +1223,9 @@ function applyImportedJson(json, currentInputs) {
       if (c.repairReserveAnnual != null) merged.repairReserveAnnual = +c.repairReserveAnnual;
       if (c.uberWearFactor != null) merged.uberWearFactor = +c.uberWearFactor;
       if (c.uberKmPerTrip != null) merged.uberKmPerTrip = +c.uberKmPerTrip;
+      // FEATURE 2 — split de carga pública vs. casera (sólo relevante para eléctrico/enchufable).
+      if (c.publicChargeFraction != null) merged.publicChargeFraction = +c.publicChargeFraction;
+      if (c.publicChargePrice != null) merged.publicChargePrice = +c.publicChargePrice;
     }
     if (json.oneTime) {
       const o = json.oneTime;
@@ -1164,6 +1258,9 @@ function applyImportedJson(json, currentInputs) {
       if (p.salesFactor != null) merged.salesFactor = +p.salesFactor;
       if (p.sellingCostPct != null) merged.sellingCostPct = +p.sellingCostPct;
       if (p.interestRate != null) merged.interestRate = +p.interestRate;
+      // FEATURE 3 — riesgo de pérdida total / robo (afecta el Monte Carlo).
+      if (p.theftLossProbAnnual != null) merged.theftLossProbAnnual = +p.theftLossProbAnnual;
+      if (p.theftDeductiblePct != null) merged.theftDeductiblePct = +p.theftDeductiblePct;
     }
     const sources = json.sources && typeof json.sources === 'object' ? json.sources : null;
     return { ok:true, inputs:merged, sources };
@@ -1256,6 +1353,8 @@ const Sidebar = ({ inputs, setInputs, onReset, onSave }) => {
       next.vehicleCondition = cond;
       next.carYear = c.year || 2026;
       next.odometerKm = c.odometerKm || 0;
+      // FEATURE 1(b) — garantía: usados sin garantía (0), nuevos con 3 años.
+      next.warrantyYearsRemaining = cond === 'used' ? 0 : 3;
       if (cond === 'used') { if (!prev.repairReserveAnnual) next.repairReserveAnnual = 6000; if (prev.interestRate <= 0.135) next.interestRate = 0.16; }
       else if (prev.repairReserveAnnual === 6000) { next.repairReserveAnnual = 0; }
       return next;
@@ -1273,9 +1372,11 @@ const Sidebar = ({ inputs, setInputs, onReset, onSave }) => {
       if (!prev.repairReserveAnnual) next.repairReserveAnnual = 6000;   // los usados sí tienen reparaciones
       if (prev.depreciationMethod === 'straight') next.depreciationMethod = 'declining';
       if (prev.interestRate <= 0.135) next.interestRate = 0.16;         // crédito de usado suele ser más caro
+      next.warrantyYearsRemaining = 0;                                  // FEATURE 1(b): usado sin garantía
     } else {
       if (prev.repairReserveAnnual === 6000) next.repairReserveAnnual = 0;
       next.odometerKm = 0;
+      next.warrantyYearsRemaining = 3;                                  // FEATURE 1(b): nuevo con garantía
     }
     return next;
   });
@@ -1321,8 +1422,10 @@ const Sidebar = ({ inputs, setInputs, onReset, onSave }) => {
         <Field label="Año modelo" value={inputs.carYear} min={2000} max={2027} step={1} onChange={v => set('carYear', v)} suffix={inputs.carYear < 2026 ? `≈${Math.max(0,2026-inputs.carYear)} años de antigüedad` : 'nuevo'} />
         {inputs.vehicleCondition==='used' && (<>
           <Field label="Kilometraje actual" value={inputs.odometerKm} min={0} max={300000} step={1000} onChange={v => set('odometerKm', v)} suffix="km en el odómetro" info="Km que ya trae el auto. Más km = más cerca de reparaciones mayores; ajusta la reserva de reparaciones." />
+          <Field label="Depreciación de usados/año" value={inputs.usedDepreciationRate} min={0.04} max={0.30} step={0.01} decimals={2} onChange={v => set('usedDepreciationRate', v)} suffix={`${fmtPct(inputs.usedDepreciationRate,0)} del valor restante (más lento que nuevo)`} info={TIPS.usedDepreciationRate} />
           <div className="field-note">Para usados, abre <strong>Ingeniería financiera</strong> y sube la <strong>reserva de reparaciones</strong>; usa método de depreciación <strong>Saldo decreciente</strong> sobre el precio ya rebajado.</div>
         </>)}
+        <Field label="Garantía restante" value={inputs.warrantyYearsRemaining} min={0} max={10} step={1} onChange={v => set('warrantyYearsRemaining', v)} suffix={inputs.warrantyYearsRemaining>0 ? `${fmtN(inputs.warrantyYearsRemaining)} años sin reserva de reparaciones` : 'sin garantía (reserva aplica desde el año 1)'} info={TIPS.warrantyYearsRemaining} />
         {usesGas && <Field label="Rendimiento" value={inputs.kmpl} min={5} max={40} step={0.1} decimals={1} onChange={v => set('kmpl', v)} suffix="km por litro" info="Kilómetros por litro. Más alto = más eficiente." />}
         {inputs.vehicleType==='hybrid' && (
           <div className="field" style={{ marginTop:4 }}>
@@ -1424,7 +1527,9 @@ const Sidebar = ({ inputs, setInputs, onReset, onSave }) => {
 
       <Group icon={Fuel} title="Costos recurrentes" blurb="Gastos que tienes mes a mes (o cada año) por tener el auto.">
         {usesGas && <Field label={inputs.vehicleType==='diesel' ? 'Precio del diésel' : 'Precio de gasolina'} value={inputs.vehicleType==='diesel' ? inputs.dieselPrice : inputs.fuelPrice} min={10} max={60} step={0.1} decimals={2} onChange={v => set(inputs.vehicleType==='diesel' ? 'dieselPrice' : 'fuelPrice', v)} suffix="MXN por litro" />}
-        {usesElectricDrive && <Field label="Precio de electricidad" value={inputs.electricityPrice} min={0.5} max={20} step={0.1} decimals={2} onChange={v => set('electricityPrice', v)} suffix="MXN por kWh" />}
+        {usesElectricDrive && <Field label="Precio de electricidad (casa)" value={inputs.electricityPrice} min={0.5} max={20} step={0.1} decimals={2} onChange={v => set('electricityPrice', v)} suffix="MXN por kWh (carga casera)" />}
+        {usesElectricDrive && <Field label="Fracción de carga pública" value={inputs.publicChargeFraction} min={0} max={1} step={0.05} decimals={2} onChange={v => set('publicChargeFraction', v)} suffix={`${fmtPct(inputs.publicChargeFraction,0)} en estaciones públicas`} info={TIPS.publicChargeFraction} />}
+        {usesElectricDrive && inputs.publicChargeFraction>0 && <Field label="Precio de carga pública" value={inputs.publicChargePrice} min={1} max={40} step={0.5} decimals={2} onChange={v => set('publicChargePrice', v)} suffix="MXN por kWh (cargador público)" info={TIPS.publicChargePrice} />}
         <Field label="Inflación combustible/año" value={inputs.fuelInflation} min={0} max={0.30} step={0.005} decimals={3} onChange={v => set('fuelInflation', v)} suffix={`+${fmtPct(inputs.fuelInflation,1)} cada año`} info={TIPS.fuelInflation} />
         {usesElectricDrive && <Field label="Inflación electricidad/año" value={inputs.electricityInflation} min={0} max={0.30} step={0.005} decimals={3} onChange={v => set('electricityInflation', v)} suffix={`+${fmtPct(inputs.electricityInflation,1)} cada año`} />}
         <div className="field"><div className="field-label" style={{ marginBottom:4 }}>Cómo cobras el seguro <Info text={TIPS.insuranceMode} /></div>
@@ -1447,6 +1552,8 @@ const Sidebar = ({ inputs, setInputs, onReset, onSave }) => {
         <Field label="Tasa de descuento (oportunidad)" value={inputs.discountRate} min={0} max={0.30} step={0.005} decimals={3} onChange={v => set('discountRate', v)} suffix={`${fmtPct(inputs.discountRate,1)} anual · CETES ≈ 10-11%`} info={TIPS.discountRate} />
         <Field label="Inflación general de costos" value={inputs.generalInflation} min={0} max={0.20} step={0.005} decimals={3} onChange={v => set('generalInflation', v)} suffix={`+${fmtPct(inputs.generalInflation,1)} cada año`} info={TIPS.generalInflation} />
         <Field label="Reserva de reparaciones/año" value={inputs.repairReserveAnnual} min={0} max={60000} step={500} onChange={v => set('repairReserveAnnual', v)} suffix={inputs.repairReserveAnnual>0 ? `${fmtMXN(inputs.repairReserveAnnual)}/año (crece con la edad)` : 'Opcional · súbelo para usados'} info={TIPS.repairReserve} />
+        <Field label="Riesgo pérdida total/robo (anual)" value={inputs.theftLossProbAnnual} min={0} max={0.10} step={0.001} decimals={3} onChange={v => set('theftLossProbAnnual', v)} suffix={`${fmtPct(inputs.theftLossProbAnnual,1)}/año · sólo afecta el Monte Carlo`} info={TIPS.theftLossProbAnnual} />
+        <Field label="Deducible cobertura amplia" value={inputs.theftDeductiblePct} min={0} max={0.20} step={0.005} decimals={3} onChange={v => set('theftDeductiblePct', v)} suffix={`${fmtPct(inputs.theftDeductiblePct,1)} del valor (lo absorbes en pérdida total)`} info={TIPS.theftDeductiblePct} />
       </Group>
 
       <Group icon={TrendingUp} title="Proyección y venta" defaultOpen={false} blurb="Cómo proyectamos el valor del auto a futuro.">
@@ -1460,6 +1567,7 @@ const Sidebar = ({ inputs, setInputs, onReset, onSave }) => {
           {inputs.depreciationMethod==='declining' && `Saldo decreciente (lo más realista): cada año pierde ${fmtPct(inputs.depreciationRate,0)} del valor restante. `}
           {inputs.depreciationMethod==='straight' && `Lineal: resta el mismo monto cada año; en ${Math.floor(1/Math.max(0.01,inputs.depreciationRate))} años llegaría a $0. `}
           {inputs.depreciationMethod==='realistic' && `Realista: −${fmtPct(inputs.firstYearDepreciation,0)} el primer año, luego ${fmtPct(inputs.depreciationRate,0)} de saldo decreciente. `}
+          {inputs.vehicleCondition==='used' && `Usado: deprecia más lento — se aplica ≈${fmtPct(effectiveDepRate(inputs),0)}/año (tasa de usados afinada por antigüedad) en vez de la tasa de lista. `}
           En {inputs.horizonYears} años conservaría ≈{fmtPct(depreciatedValue(1, inputs, inputs.horizonYears),0)} del precio.
         </div>
         <Field label="Factor venta real" value={inputs.salesFactor} min={0.3} max={2.0} step={0.01} decimals={2} onChange={v => set('salesFactor', v)} suffix={`${inputs.salesFactor.toFixed(2)}× del valor calculado`} info={TIPS.salesFactor} />
@@ -2082,6 +2190,9 @@ const Formulas = ({ R, inputs }) => {
   const i = inputs.interestRate / 12; const n = R.months;
   const dm = inputs.depreciationMethod || 'declining';
   const depName = dm==='straight' ? 'lineal (saldo original)' : dm==='realistic' ? 'realista (caída 1er año + saldo decreciente)' : 'saldo decreciente (geométrico)';
+  // FEATURE 1(a) — tasa de depreciación EFECTIVA (usados deprecian más lento y se afina con la edad).
+  const isUsedCar = inputs.vehicleCondition === 'used';
+  const effDepRate = effectiveDepRate(inputs);
   return (<div style={{ maxWidth:820 }}>
     <h1 className="serif" style={{ fontSize:38, margin:'0 0 8px' }}>Fórmulas usadas</h1>
     <p style={{ color:'var(--muted)', marginBottom:28, lineHeight:1.7 }}>Todas las ecuaciones del simulador con los valores actuales sustituidos. Las primeras son de ingeniería financiera de plazos (anualidad, VP/VF); las nuevas (VPN, TIR, CAE, CAT) son las que se usan en una decisión de inversión/compra real.</p>
@@ -2125,8 +2236,8 @@ const Formulas = ({ R, inputs }) => {
         : dm==='realistic'
           ? <>V<sub>1</sub> = V<sub>0</sub>(1 − d<sub>1</sub>) <span className="op">;</span> V<sub>n</sub> = V<sub>1</sub>(1 − d)<sup>n−1</sup></>
           : <>V<sub>n</sub> <span className="op">=</span> V<sub>0</sub> <span className="op">×</span> (1 − d)<sup>n</sup></>}</div>
-      <div className="formula-where"><em>V<sub>0</sub></em> = precio, <em>d</em> = tasa anual, <em>n</em> = años. {dm==='straight' ? 'Resta el mismo monto del precio original cada año.' : dm==='realistic' ? 'Caída fuerte el primer año y luego saldo decreciente (lo más realista para autos nuevos).' : 'Pierde el mismo % del valor RESTANTE cada año (saldo decreciente, lo estándar para autos).'} El activo nunca vale menos de 0.</div>
-      <div className="formula-substituted">V<sub>{inputs.horizonYears}</sub> = {fmtMXN(R.valueAtEnd)} ({fmtPct(R.valueAtEnd/Math.max(1,inputs.carPrice),0)} del precio) · venta neta esperada {fmtMXN(R.actualSalePrice)} · <strong>costo por depreciación {fmtMXN(R.depreciationCost)}</strong></div></div>
+      <div className="formula-where"><em>V<sub>0</sub></em> = precio, <em>d</em> = tasa anual, <em>n</em> = años. {dm==='straight' ? 'Resta el mismo monto del precio original cada año.' : dm==='realistic' ? 'Caída fuerte el primer año y luego saldo decreciente (lo más realista para autos nuevos).' : 'Pierde el mismo % del valor RESTANTE cada año (saldo decreciente, lo estándar para autos).'} El activo nunca vale menos de 0.{isUsedCar && <> <strong>Auto usado (FEATURE 1a):</strong> deprecia más lento que uno nuevo — se usa la tasa de usados ({fmtPct(inputs.usedDepreciationRate,0)}) afinada por la antigüedad, resultando en <strong>d = {fmtPct(effDepRate,0)}/año</strong> (acotada 4%–30%) en vez de la tasa de lista de {fmtPct(inputs.depreciationRate,0)}.</>}</div>
+      <div className="formula-substituted">d = {fmtPct(effDepRate,0)}/año{isUsedCar && ' (usado)'} · V<sub>{inputs.horizonYears}</sub> = {fmtMXN(R.valueAtEnd)} ({fmtPct(R.valueAtEnd/Math.max(1,inputs.carPrice),0)} del precio) · venta neta esperada {fmtMXN(R.actualSalePrice)} · <strong>costo por depreciación {fmtMXN(R.depreciationCost)}</strong></div></div>
 
     <div className="formula-block"><div className="formula-name">6 · Contribución neta por viaje</div>
       <div className="formula-eq">Ingreso <span className="op">=</span> T − (T·c<sub>uber</sub>) − Impuesto <span className="op">;</span> Contrib <span className="op">=</span> Ingreso <span className="op">−</span> costo<sub>var</sub>·km<sub>viaje</sub></div>
@@ -2232,6 +2343,10 @@ const SOURCE_LABELS = {
   taxRegime:'Régimen fiscal Uber', resicoRate:'Retención RESICO',
   financeType:'Tipo de financiamiento', balloonPct:'Valor residual (globo)',
   leaseMonthly:'Renta de arrendamiento', leaseDownPayment:'Pago inicial arrendamiento',
+  // NUEVOS: depreciación de usados, garantía, carga pública, pérdida total
+  usedDepreciationRate:'Depreciación de usados', warrantyYearsRemaining:'Garantía restante',
+  publicChargeFraction:'Fracción de carga pública', publicChargePrice:'Precio de carga pública',
+  theftLossProbAnnual:'Riesgo de pérdida total', theftDeductiblePct:'Deducible cobertura amplia',
 };
 
 // ============================================================================
