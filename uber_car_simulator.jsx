@@ -226,9 +226,30 @@ const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, num(v, lo)));
 const nonNegative = (v, fallback = 0) => Math.max(0, num(v, fallback));
 const positive = (v, fallback = 1) => Math.max(0.000001, num(v, fallback));
 
-const Info = ({ text }) => (
-  <span className="info" tabIndex={0}><HelpCircle /><span className="info-tip" dangerouslySetInnerHTML={{ __html: text }} /></span>
-);
+// Tooltip accesible en touch (FEATURE 1). En desktop sigue funcionando el :hover
+// del CSS; en móvil/tap se alterna `open` y se fuerza la visibilidad del tip por
+// estilo en línea (sin tocar el CSS global de FontsAndTheme). Cierra al perder el
+// foco (blur) o con un segundo tap. stopPropagation evita disparar handlers del padre.
+const Info = ({ text }) => {
+  const [open, setOpen] = useState(false);
+  const toggle = (e) => { e.stopPropagation(); e.preventDefault(); setOpen(o => !o); };
+  return (
+    <span
+      className="info"
+      tabIndex={0}
+      onClick={toggle}
+      onBlur={() => setOpen(false)}
+      style={{ cursor:'pointer' }}
+    >
+      <HelpCircle />
+      <span
+        className="info-tip"
+        style={open ? { opacity:1, pointerEvents:'auto', transform:'translateX(-50%) translateY(0)' } : undefined}
+        dangerouslySetInnerHTML={{ __html: text }}
+      />
+    </span>
+  );
+};
 
 const TIPS = {
   monthlyPayment: 'La mensualidad es lo que pagas cada mes al banco hasta terminar el crédito.',
@@ -1040,6 +1061,9 @@ const DEFAULT_INPUTS = {
   carWash:800, carWashTips:400, miscellaneous:2000, accessories:100,
   toxicologyReport:400, uberCertification:900,
   horizonYears:4, depreciationRate:0.20, salesFactor:1.0, monthlyIncome:0,
+  // FEATURE 4 — notas y fuentes libres del usuario (de dónde salieron precios,
+  // cotizaciones y tasas). Fluyen al Reporte; persisten vía el effect de App.
+  userNotes:'',
   // --- Ingeniería económica y variables de decisión (nuevas) ---
   vehicleCondition:'new', odometerKm:0,
   // FEATURE 1(a) — tasa de depreciación para USADOS (más lenta en % que un auto nuevo).
@@ -2434,12 +2458,16 @@ const ImportCase = ({ inputs, setInputs, sources, setSources }) => {
         <button className="btn accent" onClick={importJson} disabled={!jsonText.trim()}><Upload size={11} /> Importar y aplicar</button>
         <button className="btn outline" onClick={() => { setJsonText(''); setToast(null); }}>Limpiar</button></div>
       {toast && <div className={`toast ${toast.type}`}>{toast.msg}</div>}</div>
-    {sources && (<div className="card"><div className="card-title"><FileText size={11} /> Fuentes de los datos importados</div>
+    {sources && (<div className="card" style={{ marginBottom:22 }}><div className="card-title"><FileText size={11} /> Fuentes de los datos importados</div>
       <div className="card-blurb">Cada dato del vehículo importado, con su liga de respaldo. Verifica que provengan de fuentes confiables.</div>
       <table className="tbl"><thead><tr><th>Variable</th><th>Fuente</th></tr></thead><tbody>
         {Object.entries(sources).map(([k,v]) => (<tr key={k}><td style={{ fontFamily:'Manrope', fontWeight:500 }}>{SOURCE_LABELS[k] || k}</td>
           <td style={{ wordBreak:'break-all', fontSize:11 }}>{typeof v==='string' && v.startsWith('http') ? <a href={v} target="_blank" rel="noreferrer" style={{ color:'var(--accent)' }}>{v}</a> : <span style={{ color: v && String(v).includes('[ESTIM') ? 'var(--warn)' : 'var(--muted)' }}>{String(v)}</span>}</td></tr>))}
       </tbody></table></div>)}
+    {/* FEATURE 4 — notas y fuentes libres del usuario: fluyen al Reporte y se descargan en el .md */}
+    <div className="card"><div className="card-title"><Receipt size={11} /> Notas y fuentes</div>
+      <div className="card-blurb">Anota de dónde salieron tus números: precios de lista o cotizaciones de agencia, tasas de tu banco, cotizaciones de seguro, ligas de referencia, supuestos personales. Lo que escribas aquí aparece en el Reporte y se incluye al descargar el .md.</div>
+      <textarea className="textarea" value={inputs.userNotes} onChange={e => setInputs(prev => ({ ...prev, userNotes: e.target.value }))} placeholder={'Ej.\n- Precio: cotización agencia KIA Monterrey, 15-jun-2026.\n- Tasa 13.5%: simulador BBVA Auto.\n- Seguro $2,000/mes: cotización Qualitas cobertura amplia comercial.\n- Gasolina $24.5: promedio CRE Nuevo León.'} style={{ minHeight:160 }} /></div>
   </div>);
 };
 
@@ -2606,7 +2634,7 @@ ${R.isUberMode
 - Tasa de descuento (oportunidad): ${fmtPct(R.discountAnnual,1)} · Inflación de costos: ${fmtPct(R.generalInflation,1)}/año.
 - Depreciación: método ${inputs.depreciationMethod} a ${fmtPct(inputs.depreciationRate,0)}/año · factor de reventa ${inputs.salesFactor.toFixed(2)}× · costo de venta ${fmtPct(R.sellingCostPct,1)}.
 ${R.totalRepairReserve>0 ? `- Reserva de reparaciones acumulada en el horizonte: ${fmtMXN(R.totalRepairReserve)}.\n` : ''}- Generado por Auto·Pilot. Valida precios y tasas con fuentes oficiales (fabricante, AMDA, Profeco, CFE, banco).
-`;
+${inputs.userNotes && inputs.userNotes.trim() ? `\n## Notas y fuentes del usuario\n${inputs.userNotes.trim()}\n` : ''}`;
   const copyReport = () => { const blob = new Blob([md], { type:'text/markdown' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `analisis_${car.replace(/[^a-z0-9]+/gi,'_').toLowerCase()}.md`; a.click(); URL.revokeObjectURL(url); };
   // CSS de impresión: oculta el chrome de la app, lleva la columna principal a
   // ancho completo, quita el fondo fijo y evita cortar tablas/KPIs entre páginas.
@@ -2643,8 +2671,21 @@ ${R.totalRepairReserve>0 ? `- Reserva de reparaciones acumulada en el horizonte:
     R.isUberMode && { k:'Régimen fiscal del ingreso', v:taxRegimeLabel },
     { k:'Modo de seguro', v:insuranceModeLabel },
   ].filter(Boolean);
+  // CSS responsivo del reporte (FEATURE 3): SÓLO bajo 700px y SÓLO dentro de
+  // .report-body, así no toca el desktop ni el resto de la app. Reduce el padding
+  // (gana al inline con !important), deja que las tablas anchas hagan scroll
+  // horizontal y encoge el h1. Convive con el bloque <style media="print">.
+  const responsiveCss = `
+    @media (max-width:700px) {
+      .report-body { padding:20px 14px !important; }
+      .report-body h1 { font-size:30px; }
+      .report-body h2 { font-size:20px; }
+      .report-body table { display:block; overflow-x:auto; white-space:nowrap; -webkit-overflow-scrolling:touch; }
+    }
+  `;
   return (<div className="card report-body" style={{ padding:'40px 50px' }}>
     <style media="print">{printCss}</style>
+    <style>{responsiveCss}</style>
     <div className="report-noprint" style={{ display:'flex', justifyContent:'space-between', marginBottom:24, alignItems:'center', gap:8, flexWrap:'wrap' }}><span className="pill accent">Análisis de decisión</span><div style={{ display:'flex', gap:8 }}><button className="btn outline" onClick={handlePrint}><FileText size={11} /> Imprimir / Guardar PDF</button><button className="btn outline" onClick={copyReport}><Download size={11} /> Descargar .md</button></div></div>
     <h1>{R.isUberMode ? 'Comprar un auto y pagarlo con Uber' : 'Comprar un auto: ¿conviene y cuánto cuesta?'}</h1>
     <div style={{ fontFamily:'Manrope', fontSize:13, color:'var(--muted)', letterSpacing:'0.05em', textTransform:'uppercase' }}>{isUsed?'Usado/seminuevo':'Nuevo'} · {car} · {vehicleLabel} · {city} · 2026–{yearEnd}</div>
@@ -2779,11 +2820,93 @@ ${R.totalRepairReserve>0 ? `- Reserva de reparaciones acumulada en el horizonte:
         {Object.entries(sources).map(([k,v]) => (<tr key={k}><td style={{ fontFamily:'Manrope', fontWeight:500 }}>{SOURCE_LABELS[k] || k}</td><td style={{ wordBreak:'break-all', fontSize:11 }}>{typeof v==='string' && v.startsWith('http') ? <a href={v} target="_blank" rel="noreferrer" style={{ color:'var(--accent)' }}>{v}</a> : String(v)}</td></tr>))}
       </tbody></table></>)}
 
+    {inputs.userNotes && inputs.userNotes.trim() && (<><h2>Notas y fuentes del usuario</h2>
+      <p style={{ whiteSpace:'pre-wrap', fontSize:13.5, background:'var(--bg-2)', padding:'14px 16px', borderRadius:4 }}>{inputs.userNotes.trim()}</p></>)}
+
     <h2 style={{ color:'var(--muted)' }}>Apéndice · Conclusión narrativa</h2>
     <p style={{ fontSize:12, color:'var(--muted)', marginTop:-4 }}>Redacción corrida con el formato de la situación problema académica, por si necesitas entregarla así.</p>
     {narrative.split('\n\n').map((p,i) => <p key={i} style={{ fontSize:13.5 }}>{p}</p>)}
 
     <div style={{ marginTop:30, fontSize:11, color:'var(--muted)', fontStyle:'italic', borderTop:'1px solid var(--line)', paddingTop:14 }}>Análisis generado por Auto·Pilot con ingeniería económica (VPN, TIR, CAE, CAT). Los precios, tasas y costos son estimaciones referenciales: valídalos con fuentes oficiales (fabricante, AMDA, Profeco, CFE, tu banco/aseguradora) antes de decidir.</div>
+  </div>);
+};
+
+// ============================================================================
+// PÁGINA: GLOSARIO (FEATURE 2)  ·  Referencia legible de TODOS los términos.
+// ----------------------------------------------------------------------------
+// Reúne en un solo lugar las mismas explicaciones que aparecen en los tooltips
+// "?" (objeto TIPS), para quien quiere leerlas de corrido sin perseguir íconos.
+// GLOSSARY_LABELS da una etiqueta amigable a cada slug; GLOSSARY_SECTIONS las
+// agrupa por tema. Cualquier término de TIPS que no esté listado en una sección
+// cae automáticamente en "Otros", de modo que NUNCA se pierde una definición.
+// ============================================================================
+const GLOSSARY_LABELS = {
+  // Financiamiento y crédito
+  monthlyPayment:'Mensualidad', purchaseMode:'Modo de compra', financeType:'Tipo de financiamiento',
+  openingFee:'Comisión de apertura', amortization:'Amortización', balloonPct:'Valor residual (pago globo)',
+  cat:'CAT (Costo Anual Total)', ear:'Tasa efectiva anual', financeVsCash:'¿Financiar o pagar de contado?',
+  tradeIn:'Auto a cuenta (trade-in)', acquisitionFees:'Gastos de adquisición',
+  leaseMonthly:'Renta mensual (arrendamiento)', leaseDownPayment:'Pago inicial (arrendamiento)',
+  leaseTermMonths:'Plazo del arrendamiento', leaseKmCapYear:'Límite de km/año (arrendamiento)',
+  leaseExcessKmFee:'Cuota por km excedente',
+  // Valor del dinero e ingeniería económica
+  vp:'Valor Presente (VP)', vf:'Valor Futuro (VF)', timeValue:'Costo del dinero',
+  discountRate:'Tasa de descuento', npv:'Valor Presente Neto (VPN)', irr:'Tasa Interna de Retorno (TIR)',
+  eac:'Costo Anual Equivalente (CAE)', tco:'Costo Total de Propiedad (TCO)', costPerKm:'Costo por kilómetro',
+  totalProject:'Costo neto del proyecto', netResult:'Resultado neto del proyecto',
+  liquidation:'Resultado de liquidación', finalPosition:'Resultado final', upfrontRecovery:'Recuperación del desembolso inicial',
+  // Depreciación y reventa
+  depreciation:'Depreciación', depreciationMethod:'Método de depreciación', depreciationCost:'Costo por depreciación',
+  usedDepreciationRate:'Depreciación de usados', salesFactor:'Factor de venta', sellingCost:'Costo de venta',
+  vehicleCondition:'Nuevo vs. usado', warrantyYearsRemaining:'Años de garantía restantes',
+  repairReserve:'Reserva de reparaciones',
+  // Costos de operación
+  monthlyTotal:'Costo mensual total', costStructure:'Estructura de costos', maintenance:'Mantenimiento base',
+  wear:'Desgaste por Uber', insurance:'Seguro', insuranceMode:'Modo de seguro', insurancePctOfValue:'Seguro como % del valor',
+  refrendo:'Refrendo / tenencia', carWash:'Lavado del auto', tips:'Propinas', misc:'Misceláneos',
+  generalInflation:'Inflación general de costos', fuelInflation:'Inflación del combustible',
+  cumSpend:'Gasto acumulado', breakeven:'Punto de equilibrio', capacity:'Capacidad utilizada',
+  // Vehículo y energía
+  vehicleType:'Tipo de motor', kmPerTrip:'Km por viaje', evRange:'Autonomía eléctrica (EV)',
+  publicChargeFraction:'Fracción de carga pública', publicChargePrice:'Precio de carga pública',
+  // Uber e ingreso
+  income:'Ingreso mensual', uberCommission:'Comisión Uber', tax:'Impuesto sobre la tarifa',
+  taxRegime:'Régimen fiscal del ingreso', resicoRate:'Retención RESICO',
+  toxicology:'Examen toxicológico', certification:'Certificación de conductor',
+  // Riesgo
+  theftLossProbAnnual:'Riesgo de pérdida total / robo', theftDeductiblePct:'Deducible de cobertura amplia',
+};
+const GLOSSARY_SECTIONS = [
+  { title:'Financiamiento y crédito', keys:['monthlyPayment','purchaseMode','financeType','openingFee','amortization','balloonPct','cat','ear','financeVsCash','tradeIn','acquisitionFees','leaseMonthly','leaseDownPayment','leaseTermMonths','leaseKmCapYear','leaseExcessKmFee'] },
+  { title:'Valor del dinero e ingeniería económica', keys:['vp','vf','timeValue','discountRate','npv','irr','eac','tco','costPerKm','totalProject','netResult','liquidation','finalPosition','upfrontRecovery'] },
+  { title:'Depreciación y reventa', keys:['depreciation','depreciationMethod','depreciationCost','usedDepreciationRate','salesFactor','sellingCost','vehicleCondition','warrantyYearsRemaining','repairReserve'] },
+  { title:'Costos de operación', keys:['monthlyTotal','costStructure','maintenance','wear','insurance','insuranceMode','insurancePctOfValue','refrendo','carWash','tips','misc','generalInflation','fuelInflation','cumSpend','breakeven','capacity'] },
+  { title:'Vehículo y energía', keys:['vehicleType','kmPerTrip','evRange','publicChargeFraction','publicChargePrice'] },
+  { title:'Uber e ingreso', keys:['income','uberCommission','tax','taxRegime','resicoRate','toxicology','certification'] },
+  { title:'Riesgo', keys:['theftLossProbAnnual','theftDeductiblePct'] },
+];
+const humanizeSlug = (k) => k.replace(/([A-Z])/g,' $1').replace(/^./,c => c.toUpperCase()).trim();
+const Glossary = () => {
+  // Términos de TIPS que no quedaron en ninguna sección → van a "Otros" para no perderlos.
+  const placed = new Set(GLOSSARY_SECTIONS.flatMap(s => s.keys));
+  const leftovers = Object.keys(TIPS).filter(k => !placed.has(k));
+  const sections = leftovers.length ? [...GLOSSARY_SECTIONS, { title:'Otros', keys:leftovers }] : GLOSSARY_SECTIONS;
+  return (<div className="report-body" style={{ maxWidth:820 }}>
+    <h1 className="serif" style={{ fontSize:38, margin:'0 0 6px' }}>Glosario</h1>
+    <p style={{ color:'var(--muted)', marginBottom:24, lineHeight:1.7 }}>Todos los términos del simulador explicados en lenguaje sencillo. Son las mismas notas que aparecen al tocar el ícono <span className="info" style={{ position:'static', display:'inline-flex' }}><HelpCircle /></span> en cada campo, reunidas aquí para leerlas de corrido.</p>
+    {sections.map(sec => {
+      const items = sec.keys.filter(k => TIPS[k]);
+      if (!items.length) return null;
+      return (<div key={sec.title} style={{ marginBottom:14 }}>
+        <h2 style={{ fontSize:20 }}>{sec.title}</h2>
+        <dl style={{ margin:0 }}>
+          {items.map(k => (<div key={k} className="card" style={{ marginBottom:10, padding:'14px 18px' }}>
+            <dt style={{ fontFamily:'Manrope', fontWeight:600, fontSize:14, color:'var(--ink)', marginBottom:5 }}>{GLOSSARY_LABELS[k] || humanizeSlug(k)}</dt>
+            <dd style={{ margin:0, fontFamily:'Manrope', fontSize:13.5, lineHeight:1.6, color:'var(--ink-2)' }} dangerouslySetInnerHTML={{ __html: TIPS[k] }} />
+          </div>))}
+        </dl>
+      </div>);
+    })}
   </div>);
 };
 
@@ -2840,6 +2963,7 @@ export default function App() {
             <button className={`tab ${tab==='formulas'?'active':''}`} onClick={() => setTab('formulas')}><Calculator size={13} /> Fórmulas</button>
             <button className={`tab ${tab==='import'?'active':''}`} onClick={() => setTab('import')}><Upload size={13} /> Importar / AI</button>
             <button className={`tab ${tab==='report'?'active':''}`} onClick={() => setTab('report')}><FileText size={13} /> Reporte</button>
+            <button className={`tab ${tab==='glossary'?'active':''}`} onClick={() => setTab('glossary')}><HelpCircle size={13} /> Glosario</button>
           </div>
           {tab==='dashboard' && <Dashboard R={R} inputs={inputs} />}
           {tab==='compare' && <Comparison saved={saved} current={R} currentInputs={inputs} setSaved={setSaved} />}
@@ -2848,6 +2972,7 @@ export default function App() {
           {tab==='formulas' && <Formulas R={R} inputs={inputs} />}
           {tab==='import' && <ImportCase inputs={inputs} setInputs={setInputs} sources={sources} setSources={setSources} />}
           {tab==='report' && <Report R={R} inputs={inputs} sources={sources} />}
+          {tab==='glossary' && <Glossary />}
         </main>
       </div>
     </div>
