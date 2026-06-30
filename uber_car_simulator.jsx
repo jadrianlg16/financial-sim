@@ -1341,7 +1341,16 @@ const Segmented = ({ options, value, onChange }) => (
 //   AYUDA: lenguaje técnico PERO con explicaciones vía tooltips (ícono ? al hover)
 //          y blurbs cortos, para no ocupar mucho espacio visual.
 // ============================================================================
+// Nivel de detalle del panel: 'basic' muestra sólo lo esencial para una primera
+// decisión; 'advanced' muestra TODAS las variables (comportamiento histórico).
+// La preferencia se persiste en localStorage (sin pasar por App/inputs).
+const readSidebarMode = () => {
+  try { const m = localStorage.getItem('autopilot.sidebarMode'); return m === 'advanced' ? 'advanced' : 'basic'; }
+  catch { return 'basic'; }
+};
 const Sidebar = ({ inputs, setInputs, onReset, onSave }) => {
+  const [mode, setMode] = useState(readSidebarMode);
+  const changeMode = (m) => { setMode(m); try { localStorage.setItem('autopilot.sidebarMode', m); } catch {} };
   const set = (k, v) => setInputs(prev => ({ ...prev, [k]: v }));
   const applyCarPreset = (k) => {
     if (k === 'custom') { setInputs(prev => ({ ...prev, carPreset:'custom' })); return; }
@@ -1393,6 +1402,14 @@ const Sidebar = ({ inputs, setInputs, onReset, onSave }) => {
         <button className="btn ghost" onClick={onReset} title="Resetear"><RotateCcw size={12} /></button>
       </div>
 
+      <div style={{ marginBottom:18 }}>
+        <Segmented value={mode} onChange={changeMode}
+          options={[{value:'basic',label:'Básico'},{value:'advanced',label:'Avanzado'}]} />
+        <div style={{ fontSize:10.5, color:'var(--muted)', marginTop:6, lineHeight:1.5 }}>
+          {mode==='basic' ? 'Lo esencial para decidir.' : 'Todas las variables y supuestos.'}
+        </div>
+      </div>
+
       <Group icon={Settings} title="¿Qué quieres analizar?" blurb="Define el objetivo de tu análisis.">
         <Segmented value={inputs.operationMode} onChange={v => set('operationMode', v)}
           options={[{value:'uber-breakeven',label:'Que se pague solo'},{value:'uber-target-profit',label:'Ganar X al mes'},{value:'no-uber',label:'Sin Uber'}]} />
@@ -1420,14 +1437,14 @@ const Sidebar = ({ inputs, setInputs, onReset, onSave }) => {
             options={[{value:'new',label:'Nuevo'},{value:'used',label:'Usado / seminuevo'}]} /></div>
         <Field label="Precio del auto" value={inputs.carPrice} min={50000} max={1500000} step={1000} onChange={v => set('carPrice', v)} suffix="MXN" info="Auto nuevo, usado, o el que ya tienes. Puedes escribir cualquier monto." />
         <Field label="Año modelo" value={inputs.carYear} min={2000} max={2027} step={1} onChange={v => set('carYear', v)} suffix={inputs.carYear < 2026 ? `≈${Math.max(0,2026-inputs.carYear)} años de antigüedad` : 'nuevo'} />
-        {inputs.vehicleCondition==='used' && (<>
+        {mode==='advanced' && inputs.vehicleCondition==='used' && (<>
           <Field label="Kilometraje actual" value={inputs.odometerKm} min={0} max={300000} step={1000} onChange={v => set('odometerKm', v)} suffix="km en el odómetro" info="Km que ya trae el auto. Más km = más cerca de reparaciones mayores; ajusta la reserva de reparaciones." />
           <Field label="Depreciación de usados/año" value={inputs.usedDepreciationRate} min={0.04} max={0.30} step={0.01} decimals={2} onChange={v => set('usedDepreciationRate', v)} suffix={`${fmtPct(inputs.usedDepreciationRate,0)} del valor restante (más lento que nuevo)`} info={TIPS.usedDepreciationRate} />
           <div className="field-note">Para usados, abre <strong>Ingeniería financiera</strong> y sube la <strong>reserva de reparaciones</strong>; usa método de depreciación <strong>Saldo decreciente</strong> sobre el precio ya rebajado.</div>
         </>)}
-        <Field label="Garantía restante" value={inputs.warrantyYearsRemaining} min={0} max={10} step={1} onChange={v => set('warrantyYearsRemaining', v)} suffix={inputs.warrantyYearsRemaining>0 ? `${fmtN(inputs.warrantyYearsRemaining)} años sin reserva de reparaciones` : 'sin garantía (reserva aplica desde el año 1)'} info={TIPS.warrantyYearsRemaining} />
+        {mode==='advanced' && <Field label="Garantía restante" value={inputs.warrantyYearsRemaining} min={0} max={10} step={1} onChange={v => set('warrantyYearsRemaining', v)} suffix={inputs.warrantyYearsRemaining>0 ? `${fmtN(inputs.warrantyYearsRemaining)} años sin reserva de reparaciones` : 'sin garantía (reserva aplica desde el año 1)'} info={TIPS.warrantyYearsRemaining} />}
         {usesGas && <Field label="Rendimiento" value={inputs.kmpl} min={5} max={40} step={0.1} decimals={1} onChange={v => set('kmpl', v)} suffix="km por litro" info="Kilómetros por litro. Más alto = más eficiente." />}
-        {inputs.vehicleType==='hybrid' && (
+        {mode==='advanced' && inputs.vehicleType==='hybrid' && (
           <div className="field" style={{ marginTop:4 }}>
             <label style={{ display:'flex', alignItems:'flex-start', gap:8, fontSize:12, color:'var(--ink-2)', cursor:'pointer' }}>
               <input type="checkbox" checked={!!inputs.plugInHybrid} onChange={e => set('plugInHybrid', e.target.checked)} style={{ marginTop:2 }} />
@@ -1437,9 +1454,11 @@ const Sidebar = ({ inputs, setInputs, onReset, onSave }) => {
         )}
         {usesElectricDrive && (<>
           <Field label="Rendimiento eléctrico" value={inputs.kmPerKwh} min={2} max={12} step={0.1} decimals={1} onChange={v => set('kmPerKwh', v)} suffix="km por kWh" />
-          <Field label="Capacidad batería" value={inputs.batteryCapacityKwh} min={5} max={150} step={1} onChange={v => set('batteryCapacityKwh', v)} suffix="kWh" />
-          <Field label="Potencia cargador casero" value={inputs.chargerPowerKw} min={1.5} max={50} step={0.5} decimals={1} onChange={v => set('chargerPowerKw', v)} suffix="kW" info="1.8 kW (contacto normal), 7 kW (instalación dedicada), 11+ kW (rápido casero)." />
-          {isPlugInHybrid && <Field label="Fracción en modo eléctrico" value={inputs.hybridElectricFraction} min={0} max={1} step={0.05} decimals={2} onChange={v => set('hybridElectricFraction', v)} suffix={`${fmtPct(inputs.hybridElectricFraction,0)} del tiempo en eléctrico`} />}
+          {mode==='advanced' && (<>
+            <Field label="Capacidad batería" value={inputs.batteryCapacityKwh} min={5} max={150} step={1} onChange={v => set('batteryCapacityKwh', v)} suffix="kWh" />
+            <Field label="Potencia cargador casero" value={inputs.chargerPowerKw} min={1.5} max={50} step={0.5} decimals={1} onChange={v => set('chargerPowerKw', v)} suffix="kW" info="1.8 kW (contacto normal), 7 kW (instalación dedicada), 11+ kW (rápido casero)." />
+            {isPlugInHybrid && <Field label="Fracción en modo eléctrico" value={inputs.hybridElectricFraction} min={0} max={1} step={0.05} decimals={2} onChange={v => set('hybridElectricFraction', v)} suffix={`${fmtPct(inputs.hybridElectricFraction,0)} del tiempo en eléctrico`} />}
+          </>)}
         </>)}
       </Group>
 
@@ -1464,7 +1483,7 @@ const Sidebar = ({ inputs, setInputs, onReset, onSave }) => {
           {inputs.downPaymentMode==='percent'
             ? <Field label="Enganche" value={inputs.downPaymentPct} min={0.05} max={0.6} step={0.01} decimals={2} onChange={v => set('downPaymentPct', v)} suffix={`${fmtPct(inputs.downPaymentPct,0)} del precio`} />
             : <Field label="Enganche (monto)" value={inputs.downPaymentFixed} min={10000} max={500000} step={1000} onChange={v => set('downPaymentFixed', v)} suffix="MXN" />}
-          {inputs.financeType==='balloon' && <Field label="Valor residual (globo)" value={inputs.balloonPct} min={0} max={0.6} step={0.01} decimals={2} onChange={v => set('balloonPct', v)} suffix={`${fmtPct(inputs.balloonPct,0)} del financiado al final`} info={TIPS.balloonPct} />}
+          {mode==='advanced' && inputs.financeType==='balloon' && <Field label="Valor residual (globo)" value={inputs.balloonPct} min={0} max={0.6} step={0.01} decimals={2} onChange={v => set('balloonPct', v)} suffix={`${fmtPct(inputs.balloonPct,0)} del financiado al final`} info={TIPS.balloonPct} />}
         </>)}
         {/* Arrendamiento: renta + pago inicial + plazo + tope de km */}
         {inputs.purchaseMode==='credit' && inputs.financeType==='lease' && (<>
@@ -1480,10 +1499,12 @@ const Sidebar = ({ inputs, setInputs, onReset, onSave }) => {
         {inputs.purchaseMode!=='cash' && !(inputs.purchaseMode==='credit' && inputs.financeType==='lease') && (<>
           <Field label="Tasa de interés anual" value={inputs.interestRate} min={0.03} max={0.40} step={0.001} decimals={3} onChange={v => set('interestRate', v)} suffix={`${fmtPct(inputs.interestRate,1)} anual`} info="Créditos automotrices típicos: 10% a 18% anual (usados suelen ser más caros)." />
           <Field label="Plazo del crédito" value={inputs.loanMonths} min={6} max={84} step={6} onChange={v => set('loanMonths', v)} suffix="meses" />
-          <Field label="Comisión de apertura" value={inputs.openingFeePct} min={0} max={0.10} step={0.001} decimals={3} onChange={v => set('openingFeePct', v)} suffix={fmtPct(inputs.openingFeePct,1)} info={TIPS.openingFee} />
+          {mode==='advanced' && <Field label="Comisión de apertura" value={inputs.openingFeePct} min={0} max={0.10} step={0.001} decimals={3} onChange={v => set('openingFeePct', v)} suffix={fmtPct(inputs.openingFeePct,1)} info={TIPS.openingFee} />}
         </>)}
-        <Field label="Auto a cuenta (trade-in)" value={inputs.tradeInValue} min={0} max={800000} step={5000} onChange={v => set('tradeInValue', v)} suffix={inputs.tradeInValue>0 ? `${fmtMXN(inputs.tradeInValue)} a cuenta` : 'Opcional · entregas tu auto actual'} info={TIPS.tradeIn} />
-        <Field label="Gastos de adquisición" value={inputs.acquisitionFees} min={0} max={100000} step={500} onChange={v => set('acquisitionFees', v)} suffix="MXN (placas, alta, ISAN, traspaso)" info={TIPS.acquisitionFees} />
+        {mode==='advanced' && (<>
+          <Field label="Auto a cuenta (trade-in)" value={inputs.tradeInValue} min={0} max={800000} step={5000} onChange={v => set('tradeInValue', v)} suffix={inputs.tradeInValue>0 ? `${fmtMXN(inputs.tradeInValue)} a cuenta` : 'Opcional · entregas tu auto actual'} info={TIPS.tradeIn} />
+          <Field label="Gastos de adquisición" value={inputs.acquisitionFees} min={0} max={100000} step={500} onChange={v => set('acquisitionFees', v)} suffix="MXN (placas, alta, ISAN, traspaso)" info={TIPS.acquisitionFees} />
+        </>)}
       </Group>
 
       {inputs.operationMode!=='no-uber' && (
@@ -1508,30 +1529,32 @@ const Sidebar = ({ inputs, setInputs, onReset, onSave }) => {
           <Field label="Viajes por hora" value={inputs.tripsPerHour} min={0.5} max={5} step={0.1} decimals={1} onChange={v => set('tripsPerHour', v)} suffix={inputs.tripsPerHour>4 ? '⚠️ Máx. 4 según el problema' : 'viajes/hora'} info="El problema asume un tope realista de 4 viajes por hora." />
           <Field label="Horas máx. disponibles/día" value={inputs.maxHoursPerDay} min={1} max={16} step={0.5} decimals={1} onChange={v => set('maxHoursPerDay', v)} suffix="horas/día" />
           <Field label="Días trabajados al mes" value={inputs.workDaysPerMonth} min={1} max={31} step={1} onChange={v => set('workDaysPerMonth', v)} suffix="días" />
-          <Field label="Km por viaje (incl. traslados)" value={inputs.uberKmPerTrip} min={1} max={40} step={0.5} decimals={1} onChange={v => set('uberKmPerTrip', v)} suffix="km/viaje" info="Kilómetros que recorres por cada viaje, incluyendo el traslado para recoger al pasajero. Conecta los viajes con el gasto de combustible y mantenimiento." />
+          {mode==='advanced' && <Field label="Km por viaje (incl. traslados)" value={inputs.uberKmPerTrip} min={1} max={40} step={0.5} decimals={1} onChange={v => set('uberKmPerTrip', v)} suffix="km/viaje" info="Kilómetros que recorres por cada viaje, incluyendo el traslado para recoger al pasajero. Conecta los viajes con el gasto de combustible y mantenimiento." />}
           <div className="field-note">El punto de equilibrio Uber incluye la recuperación del proyecto completo: costos mensuales más el desembolso inicial que no quede cubierto por la venta final del auto menos la deuda.</div>
         </Group>
       )}
 
-      {inputs.operationMode!=='no-uber' && (
+      {mode==='advanced' && inputs.operationMode!=='no-uber' && (
         <Group icon={Receipt} title="Pagos iniciales únicos" blurb="Trámites que pagas UNA sola vez para darte de alta en Uber.">
           <Field label="Examen toxicológico" value={inputs.toxicologyReport} min={0} max={3000} step={50} onChange={v => set('toxicologyReport', v)} suffix="MXN (una vez)" info={TIPS.toxicology} />
           <Field label="Certificación inicial Uber" value={inputs.uberCertification} min={0} max={5000} step={50} onChange={v => set('uberCertification', v)} suffix="MXN (una vez)" info={TIPS.certification} />
         </Group>
       )}
 
-      <Group icon={Building2} title="Uso personal y desgaste" blurb="Si usarás el auto también para tu vida normal (no Uber), agrégalo aquí.">
-        <Field label="Km personales/día" value={inputs.personalKmDaily} min={0} max={200} step={1} onChange={v => set('personalKmDaily', v)} suffix="km/día (no Uber)" />
-        {inputs.operationMode!=='no-uber' && <Field label="Desgaste extra por Uber" value={inputs.uberWearFactor} min={0} max={1.5} step={0.05} decimals={2} onChange={v => set('uberWearFactor', v)} suffix={`+${fmtPct(inputs.uberWearFactor,0)} mantenimiento`} info={TIPS.wear} />}
-      </Group>
+      {mode==='advanced' && (
+        <Group icon={Building2} title="Uso personal y desgaste" blurb="Si usarás el auto también para tu vida normal (no Uber), agrégalo aquí.">
+          <Field label="Km personales/día" value={inputs.personalKmDaily} min={0} max={200} step={1} onChange={v => set('personalKmDaily', v)} suffix="km/día (no Uber)" />
+          {inputs.operationMode!=='no-uber' && <Field label="Desgaste extra por Uber" value={inputs.uberWearFactor} min={0} max={1.5} step={0.05} decimals={2} onChange={v => set('uberWearFactor', v)} suffix={`+${fmtPct(inputs.uberWearFactor,0)} mantenimiento`} info={TIPS.wear} />}
+        </Group>
+      )}
 
       <Group icon={Fuel} title="Costos recurrentes" blurb="Gastos que tienes mes a mes (o cada año) por tener el auto.">
         {usesGas && <Field label={inputs.vehicleType==='diesel' ? 'Precio del diésel' : 'Precio de gasolina'} value={inputs.vehicleType==='diesel' ? inputs.dieselPrice : inputs.fuelPrice} min={10} max={60} step={0.1} decimals={2} onChange={v => set(inputs.vehicleType==='diesel' ? 'dieselPrice' : 'fuelPrice', v)} suffix="MXN por litro" />}
         {usesElectricDrive && <Field label="Precio de electricidad (casa)" value={inputs.electricityPrice} min={0.5} max={20} step={0.1} decimals={2} onChange={v => set('electricityPrice', v)} suffix="MXN por kWh (carga casera)" />}
-        {usesElectricDrive && <Field label="Fracción de carga pública" value={inputs.publicChargeFraction} min={0} max={1} step={0.05} decimals={2} onChange={v => set('publicChargeFraction', v)} suffix={`${fmtPct(inputs.publicChargeFraction,0)} en estaciones públicas`} info={TIPS.publicChargeFraction} />}
-        {usesElectricDrive && inputs.publicChargeFraction>0 && <Field label="Precio de carga pública" value={inputs.publicChargePrice} min={1} max={40} step={0.5} decimals={2} onChange={v => set('publicChargePrice', v)} suffix="MXN por kWh (cargador público)" info={TIPS.publicChargePrice} />}
-        <Field label="Inflación combustible/año" value={inputs.fuelInflation} min={0} max={0.30} step={0.005} decimals={3} onChange={v => set('fuelInflation', v)} suffix={`+${fmtPct(inputs.fuelInflation,1)} cada año`} info={TIPS.fuelInflation} />
-        {usesElectricDrive && <Field label="Inflación electricidad/año" value={inputs.electricityInflation} min={0} max={0.30} step={0.005} decimals={3} onChange={v => set('electricityInflation', v)} suffix={`+${fmtPct(inputs.electricityInflation,1)} cada año`} />}
+        {mode==='advanced' && usesElectricDrive && <Field label="Fracción de carga pública" value={inputs.publicChargeFraction} min={0} max={1} step={0.05} decimals={2} onChange={v => set('publicChargeFraction', v)} suffix={`${fmtPct(inputs.publicChargeFraction,0)} en estaciones públicas`} info={TIPS.publicChargeFraction} />}
+        {mode==='advanced' && usesElectricDrive && inputs.publicChargeFraction>0 && <Field label="Precio de carga pública" value={inputs.publicChargePrice} min={1} max={40} step={0.5} decimals={2} onChange={v => set('publicChargePrice', v)} suffix="MXN por kWh (cargador público)" info={TIPS.publicChargePrice} />}
+        {mode==='advanced' && <Field label="Inflación combustible/año" value={inputs.fuelInflation} min={0} max={0.30} step={0.005} decimals={3} onChange={v => set('fuelInflation', v)} suffix={`+${fmtPct(inputs.fuelInflation,1)} cada año`} info={TIPS.fuelInflation} />}
+        {mode==='advanced' && usesElectricDrive && <Field label="Inflación electricidad/año" value={inputs.electricityInflation} min={0} max={0.30} step={0.005} decimals={3} onChange={v => set('electricityInflation', v)} suffix={`+${fmtPct(inputs.electricityInflation,1)} cada año`} />}
         <div className="field"><div className="field-label" style={{ marginBottom:4 }}>Cómo cobras el seguro <Info text={TIPS.insuranceMode} /></div>
           <Segmented value={inputs.insuranceMode || 'fixed'} onChange={v => set('insuranceMode', v)}
             options={[{value:'fixed',label:'Monto fijo'},{value:'pctOfValue',label:'% del valor'}]} /></div>
@@ -1540,24 +1563,29 @@ const Sidebar = ({ inputs, setInputs, onReset, onSave }) => {
           : <Field label="Seguro mensual" value={inputs.monthlyInsurance} min={300} max={8000} step={50} onChange={v => set('monthlyInsurance', v)} suffix="MXN/mes" info={TIPS.insurance} />}
         {inputs.operationMode!=='no-uber' && <div className="field-note">⚠️ Si usas el auto para Uber, muchas aseguradoras exigen una <strong>póliza comercial</strong> más cara que la de un auto particular. Por eso el default ya está en $2,000/mes.</div>}
         <Field label="Mantenimiento base anual" value={inputs.annualMaintenance} min={1000} max={60000} step={500} onChange={v => set('annualMaintenance', v)} suffix="MXN/año a 20,000 km" info={TIPS.maintenance} />
-        <Field label="Refrendo / Tenencia" value={inputs.monthlyRefrendo} min={0} max={5000} step={50} onChange={v => set('monthlyRefrendo', v)} suffix="MXN/mes" info={TIPS.refrendo} />
-        <Field label="Datos móviles" value={inputs.dataPlan} min={0} max={3000} step={50} onChange={v => set('dataPlan', v)} suffix="MXN/mes" />
-        <Field label="Lavado de auto" value={inputs.carWash} min={0} max={3000} step={50} onChange={v => set('carWash', v)} suffix="MXN/mes" info={TIPS.carWash} />
-        <Field label="Propinas (lavado/servicio)" value={inputs.carWashTips} min={0} max={2000} step={25} onChange={v => set('carWashTips', v)} suffix="MXN/mes" info={TIPS.tips} />
-        <Field label="Misceláneos / imprevistos" value={inputs.miscellaneous} min={0} max={10000} step={100} onChange={v => set('miscellaneous', v)} suffix="MXN/mes" info={TIPS.misc} />
-        <Field label="Accesorios/gadgets" value={inputs.accessories} min={0} max={2000} step={25} onChange={v => set('accessories', v)} suffix="MXN/mes" />
+        {mode==='advanced' && (<>
+          <Field label="Refrendo / Tenencia" value={inputs.monthlyRefrendo} min={0} max={5000} step={50} onChange={v => set('monthlyRefrendo', v)} suffix="MXN/mes" info={TIPS.refrendo} />
+          <Field label="Datos móviles" value={inputs.dataPlan} min={0} max={3000} step={50} onChange={v => set('dataPlan', v)} suffix="MXN/mes" />
+          <Field label="Lavado de auto" value={inputs.carWash} min={0} max={3000} step={50} onChange={v => set('carWash', v)} suffix="MXN/mes" info={TIPS.carWash} />
+          <Field label="Propinas (lavado/servicio)" value={inputs.carWashTips} min={0} max={2000} step={25} onChange={v => set('carWashTips', v)} suffix="MXN/mes" info={TIPS.tips} />
+          <Field label="Misceláneos / imprevistos" value={inputs.miscellaneous} min={0} max={10000} step={100} onChange={v => set('miscellaneous', v)} suffix="MXN/mes" info={TIPS.misc} />
+          <Field label="Accesorios/gadgets" value={inputs.accessories} min={0} max={2000} step={25} onChange={v => set('accessories', v)} suffix="MXN/mes" />
+        </>)}
       </Group>
 
-      <Group icon={Calculator} title="Ingeniería financiera" defaultOpen={false} blurb="El corazón del análisis: tasa de oportunidad para VPN/CAE e inflación de costos.">
-        <Field label="Tasa de descuento (oportunidad)" value={inputs.discountRate} min={0} max={0.30} step={0.005} decimals={3} onChange={v => set('discountRate', v)} suffix={`${fmtPct(inputs.discountRate,1)} anual · CETES ≈ 10-11%`} info={TIPS.discountRate} />
-        <Field label="Inflación general de costos" value={inputs.generalInflation} min={0} max={0.20} step={0.005} decimals={3} onChange={v => set('generalInflation', v)} suffix={`+${fmtPct(inputs.generalInflation,1)} cada año`} info={TIPS.generalInflation} />
-        <Field label="Reserva de reparaciones/año" value={inputs.repairReserveAnnual} min={0} max={60000} step={500} onChange={v => set('repairReserveAnnual', v)} suffix={inputs.repairReserveAnnual>0 ? `${fmtMXN(inputs.repairReserveAnnual)}/año (crece con la edad)` : 'Opcional · súbelo para usados'} info={TIPS.repairReserve} />
-        <Field label="Riesgo pérdida total/robo (anual)" value={inputs.theftLossProbAnnual} min={0} max={0.10} step={0.001} decimals={3} onChange={v => set('theftLossProbAnnual', v)} suffix={`${fmtPct(inputs.theftLossProbAnnual,1)}/año · sólo afecta el Monte Carlo`} info={TIPS.theftLossProbAnnual} />
-        <Field label="Deducible cobertura amplia" value={inputs.theftDeductiblePct} min={0} max={0.20} step={0.005} decimals={3} onChange={v => set('theftDeductiblePct', v)} suffix={`${fmtPct(inputs.theftDeductiblePct,1)} del valor (lo absorbes en pérdida total)`} info={TIPS.theftDeductiblePct} />
-      </Group>
+      {mode==='advanced' && (
+        <Group icon={Calculator} title="Ingeniería financiera" defaultOpen={false} blurb="El corazón del análisis: tasa de oportunidad para VPN/CAE e inflación de costos.">
+          <Field label="Tasa de descuento (oportunidad)" value={inputs.discountRate} min={0} max={0.30} step={0.005} decimals={3} onChange={v => set('discountRate', v)} suffix={`${fmtPct(inputs.discountRate,1)} anual · CETES ≈ 10-11%`} info={TIPS.discountRate} />
+          <Field label="Inflación general de costos" value={inputs.generalInflation} min={0} max={0.20} step={0.005} decimals={3} onChange={v => set('generalInflation', v)} suffix={`+${fmtPct(inputs.generalInflation,1)} cada año`} info={TIPS.generalInflation} />
+          <Field label="Reserva de reparaciones/año" value={inputs.repairReserveAnnual} min={0} max={60000} step={500} onChange={v => set('repairReserveAnnual', v)} suffix={inputs.repairReserveAnnual>0 ? `${fmtMXN(inputs.repairReserveAnnual)}/año (crece con la edad)` : 'Opcional · súbelo para usados'} info={TIPS.repairReserve} />
+          <Field label="Riesgo pérdida total/robo (anual)" value={inputs.theftLossProbAnnual} min={0} max={0.10} step={0.001} decimals={3} onChange={v => set('theftLossProbAnnual', v)} suffix={`${fmtPct(inputs.theftLossProbAnnual,1)}/año · sólo afecta el Monte Carlo`} info={TIPS.theftLossProbAnnual} />
+          <Field label="Deducible cobertura amplia" value={inputs.theftDeductiblePct} min={0} max={0.20} step={0.005} decimals={3} onChange={v => set('theftDeductiblePct', v)} suffix={`${fmtPct(inputs.theftDeductiblePct,1)} del valor (lo absorbes en pérdida total)`} info={TIPS.theftDeductiblePct} />
+        </Group>
+      )}
 
-      <Group icon={TrendingUp} title="Proyección y venta" defaultOpen={false} blurb="Cómo proyectamos el valor del auto a futuro.">
+      <Group icon={TrendingUp} title="Proyección y venta" defaultOpen={mode==='basic' ? true : false} blurb="Cómo proyectamos el valor del auto a futuro.">
         <Field label="Horizonte de análisis" value={inputs.horizonYears} min={1} max={15} step={1} onChange={v => set('horizonYears', v)} suffix="años" />
+        {mode==='advanced' && (<>
         <div className="field"><div className="field-label" style={{ marginBottom:4 }}>Método de depreciación <Info text={TIPS.depreciationMethod} /></div>
           <Segmented value={inputs.depreciationMethod || 'declining'} onChange={v => set('depreciationMethod', v)}
             options={[{value:'declining',label:'Saldo decreciente'},{value:'straight',label:'Lineal'},{value:'realistic',label:'Realista'}]} /></div>
@@ -1572,6 +1600,7 @@ const Sidebar = ({ inputs, setInputs, onReset, onSave }) => {
         </div>
         <Field label="Factor venta real" value={inputs.salesFactor} min={0.3} max={2.0} step={0.01} decimals={2} onChange={v => set('salesFactor', v)} suffix={`${inputs.salesFactor.toFixed(2)}× del valor calculado`} info={TIPS.salesFactor} />
         <Field label="Costo de venta al liquidar" value={inputs.sellingCostPct} min={0} max={0.15} step={0.005} decimals={3} onChange={v => set('sellingCostPct', v)} suffix={`${fmtPct(inputs.sellingCostPct,1)} (comisión/traspaso)`} info={TIPS.sellingCost} />
+        </>)}
       </Group>
 
       <Group icon={PiggyBank} title="Tu ingreso (opcional)" defaultOpen={false} blurb="Si llenas tu ingreso, te mostramos qué porcentaje de tu sueldo se iría al auto.">
