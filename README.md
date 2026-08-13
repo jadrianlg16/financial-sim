@@ -28,10 +28,10 @@ never leave the browser.
 
 ## Origin story
 
-Started as an economic-engineering class assignment (evaluate a 2026–2029
-vehicle project as a "financial consultant"), then kept growing until it
-became a genuinely useful car-purchase decision tool. The class context lives
-in `Context from class/`; the app long since outgrew it.
+Started as an economic-engineering exercise — evaluate a 2026–2029 vehicle
+project as a "financial consultant" — then kept growing until it became a
+genuinely useful car-purchase decision tool. The full requirements log is in
+[docs/REQUISITOS.md](docs/REQUISITOS.md).
 
 ## Run it
 
@@ -47,8 +47,13 @@ docker run --rm -p 5006:80 financial-sim
 
 ## Stack
 
-React 19 · Vite · Recharts · lucide-react — one deliberately self-contained
-main component (`uber_car_simulator.jsx`) holding the entire model.
+React 19 · Vite · Recharts · lucide-react. No backend, no network calls.
+
+The financial model lives in `src/domain/` as plain JavaScript with no React
+imports, so it can be called from a test or a script without a renderer;
+`src/components/` only presents what the model returns. See
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the layer map and the
+dependency rule.
 
 ---
 
