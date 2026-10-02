@@ -166,7 +166,7 @@ Dockerfile                      build with Node, serve dist/ with nginx
 ## Limitations
 
 - **Spanish-only UI, MXN only, Mexico-specific defaults.** Car prices, city fares, fuel and electricity prices, the platform commission and the tax regimes are fixed Mexican numbers in `constants.js` and `defaults.js`, not live market data.
-- **Monte Carlo runs on the main thread and the app does not seed it.** A 10,000-run simulation freezes the page for a few seconds, and results vary slightly from run to run (the tests use a seeded generator).
+- **Monte Carlo runs on the main thread and the app does not seed it.** The page blocks while a simulation runs, and results vary slightly from run to run (the tests use a seeded generator).
 - **Simplified operating model.** Income is average fare × trips, a month is 30 days, and per-km maintenance assumes a 20,000 km/year baseline. Break-even trips cover year-one running costs (energy is averaged over the horizon); general cost inflation, the used-car repair reserve and a lease's excess-km penalty are charged in the year-by-year cash flow but not in the break-even, so the net result at "break-even" can be negative. The tool supports a decision; it is not financial advice.
 - **Imported cases are only as good as the LLM's answer.** The app validates the shape of each value and lists the sources it gets back, but it cannot verify them.
 
