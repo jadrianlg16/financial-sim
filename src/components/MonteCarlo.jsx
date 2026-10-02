@@ -4,7 +4,14 @@ import { BarChart3, Dice5 } from 'lucide-react';
 import { Info } from './ui/Info.jsx';
 import { TIPS } from '../content/tips.jsx';
 import { fmtMXN, fmtN, fmtPct } from '../domain/format.js';
-import { runMonteCarlo } from '../domain/monteCarlo.js';
+import { MC_VARIATIONS, runMonteCarlo } from '../domain/monteCarlo.js';
+
+const VARIATION_GROUPS = [
+  ['income', 'Ingreso y plataforma'],
+  ['energy', 'Energía (según el motor)'],
+  ['costs', 'Costos recurrentes'],
+  ['value', 'Valor del auto'],
+];
 
 // ============================================================================
 // PÁGINA: MONTE CARLO
@@ -12,7 +19,8 @@ import { runMonteCarlo } from '../domain/monteCarlo.js';
 // Repite el cálculo miles de veces variando al azar los valores inciertos para
 // estimar la probabilidad de que el plan funcione. Muestra P10/P50/P90 de viajes,
 // liquidación y resultado neto, y el histograma del punto de equilibrio. La lista
-// en pantalla de lo que varía debe coincidir con runMonteCarlo().
+// en pantalla de lo que varía sale de MC_VARIATIONS, la misma tabla que usa
+// runMonteCarlo(), así que no puede quedar desactualizada.
 // ============================================================================
 export const MonteCarlo = ({ inputs }) => {
   const [results, setResults] = useState(null);
@@ -37,15 +45,21 @@ export const MonteCarlo = ({ inputs }) => {
           probable es que tu plan funcione. Es una forma de medir el riesgo.
           <br />
           <br />
-          En cada repetición cambia un poco:
+          En cada repetición cambian {MC_VARIATIONS.length} valores (el ± es una desviación
+          estándar):
           <ul style={{ marginTop: 6, marginBottom: 0, paddingLeft: 18 }}>
-            <li>Tarifa por viaje (±12%)</li>
-            <li>Precio del combustible (±8%)</li>
-            <li>Comisión Uber (±2 puntos %)</li>
-            <li>Mantenimiento base anual (±25%)</li>
-            <li>Seguro mensual (±15%)</li>
-            <li>Depreciación (±4 puntos %)</li>
-            <li>Viajes/hora (varía un poco, máx 4)</li>
+            {VARIATION_GROUPS.map(([group, title]) => (
+              <li key={group}>
+                <strong>{title}:</strong>{' '}
+                {MC_VARIATIONS.filter((v) => v.group === group)
+                  .map((v) => `${v.label} (${v.spread})`)
+                  .join(', ')}
+              </li>
+            ))}
+            <li>
+              Además, una <strong>pérdida total o robo</strong> con la probabilidad anual del panel
+              (sólo si el auto es tuyo): el seguro paga su valor menos el deducible.
+            </li>
           </ul>
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', justifyContent: 'flex-end' }}>

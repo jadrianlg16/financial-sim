@@ -14,6 +14,107 @@ export function randomNormal(mean, std, rng = Math.random) {
   return mean + std * Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
 }
 /**
+ * Uncertain inputs and how much each varies per run: normal noise with a
+ * standard deviation of `rel` × the input (or `abs` in the input's own units),
+ * clamped to [min, max]. Runs draw them in this order, so reordering changes
+ * seeded results. The Monte Carlo tab lists them from this table.
+ */
+export const MC_VARIATIONS = [
+  // Ingreso y plataforma
+  {
+    key: 'avgFare',
+    group: 'income',
+    label: 'tarifa por viaje',
+    spread: '±12%',
+    rel: 0.12,
+    min: 50,
+  },
+  {
+    key: 'uberCommission',
+    group: 'income',
+    label: 'comisión Uber',
+    spread: '±2 puntos %',
+    abs: 0.02,
+    min: 0.15,
+    max: 0.5,
+  },
+  {
+    key: 'uberKmPerTrip',
+    group: 'income',
+    label: 'km por viaje',
+    spread: '±15%',
+    rel: 0.15,
+    min: 1,
+  },
+  {
+    key: 'tripsPerHour',
+    group: 'income',
+    label: 'viajes por hora',
+    spread: '±0.4, entre 1 y 4',
+    abs: 0.4,
+    min: 1,
+    max: 4,
+  },
+  // Energía (cada motor usa sólo la suya)
+  { key: 'fuelPrice', group: 'energy', label: 'gasolina', spread: '±8%', rel: 0.08, min: 8 },
+  { key: 'dieselPrice', group: 'energy', label: 'diésel', spread: '±8%', rel: 0.08, min: 8 },
+  {
+    key: 'electricityPrice',
+    group: 'energy',
+    label: 'electricidad',
+    spread: '±10%',
+    rel: 0.1,
+    min: 0.5,
+  },
+  {
+    key: 'kmPerKwh',
+    group: 'energy',
+    label: 'rendimiento eléctrico',
+    spread: '±10%',
+    rel: 0.1,
+    min: 2,
+  },
+  // Costos recurrentes
+  {
+    key: 'annualMaintenance',
+    group: 'costs',
+    label: 'mantenimiento base',
+    spread: '±25%',
+    rel: 0.25,
+    min: 0,
+  },
+  {
+    key: 'monthlyInsurance',
+    group: 'costs',
+    label: 'seguro mensual',
+    spread: '±15%',
+    rel: 0.15,
+    min: 0,
+  },
+  { key: 'monthlyRefrendo', group: 'costs', label: 'refrendo', spread: '±20%', rel: 0.2, min: 0 },
+  { key: 'carWash', group: 'costs', label: 'lavado', spread: '±20%', rel: 0.2, min: 0 },
+  { key: 'miscellaneous', group: 'costs', label: 'misceláneos', spread: '±35%', rel: 0.35, min: 0 },
+  // Valor del auto
+  {
+    key: 'depreciationRate',
+    group: 'value',
+    label: 'depreciación',
+    spread: '±4 puntos %',
+    abs: 0.04,
+    min: 0.05,
+    max: 0.5,
+  },
+  {
+    key: 'salesFactor',
+    group: 'value',
+    label: 'factor de venta',
+    spread: '±12%',
+    rel: 0.12,
+    min: 0.3,
+  },
+];
+
+/**
  * Re-runs calculate() `iterations` times with randomized inputs and summarizes
  * break-even trips, liquidation value and net result (P10/P50/P90, histogram).
  * Pass `{ rng }` to make a run reproducible; every random draw goes through it.
@@ -21,8 +122,6 @@ export function randomNormal(mean, std, rng = Math.random) {
 export function runMonteCarlo(inputs, iterations = 3000, { rng = Math.random, year } = {}) {
   const results = [];
   const normal = (mean, std) => randomNormal(mean, std, rng);
-  const jitter = (val, pct, lo = -Infinity, hi = Infinity) =>
-    Math.min(hi, Math.max(lo, normal(val, Math.abs(val) * pct)));
   // Riesgo de pérdida total o robo en el horizonte: con probabilidad anual p, la
   // acumulada en N años es pTL = 1 − (1 − p)^N (acotada a [0, 0.95]).
   // En un arrendamiento no eres dueño del activo, así que el evento no cambia tu
@@ -39,28 +138,12 @@ export function runMonteCarlo(inputs, iterations = 3000, { rng = Math.random, ye
     0.5,
   );
   for (let i = 0; i < iterations; i++) {
-    const sim = {
-      ...inputs,
-      // Ingreso / plataforma
-      avgFare: Math.max(50, jitter(inputs.avgFare, 0.12)),
-      uberCommission: Math.min(0.5, Math.max(0.15, normal(inputs.uberCommission, 0.02))),
-      uberKmPerTrip: Math.max(1, jitter(inputs.uberKmPerTrip, 0.15)),
-      tripsPerHour: Math.max(1, Math.min(4, normal(inputs.tripsPerHour, 0.4))),
-      // Energía (según motor)
-      fuelPrice: Math.max(8, jitter(inputs.fuelPrice, 0.08)),
-      dieselPrice: Math.max(8, jitter(inputs.dieselPrice, 0.08)),
-      electricityPrice: Math.max(0.5, jitter(inputs.electricityPrice, 0.1)),
-      kmPerKwh: Math.max(2, jitter(inputs.kmPerKwh, 0.1)),
-      // Costos recurrentes
-      annualMaintenance: Math.max(0, jitter(inputs.annualMaintenance, 0.25)),
-      monthlyInsurance: Math.max(0, jitter(inputs.monthlyInsurance, 0.15)),
-      monthlyRefrendo: Math.max(0, jitter(inputs.monthlyRefrendo, 0.2)),
-      carWash: Math.max(0, jitter(inputs.carWash, 0.2)),
-      miscellaneous: Math.max(0, jitter(inputs.miscellaneous, 0.35)),
-      // Valor del activo
-      depreciationRate: Math.min(0.5, Math.max(0.05, normal(inputs.depreciationRate, 0.04))),
-      salesFactor: Math.max(0.3, jitter(inputs.salesFactor, 0.12)),
-    };
+    const sim = { ...inputs };
+    for (const { key, rel, abs, min = -Infinity, max = Infinity } of MC_VARIATIONS) {
+      const mean = inputs[key];
+      const std = rel != null ? Math.abs(mean) * rel : abs;
+      sim[key] = Math.min(max, Math.max(min, normal(mean, std)));
+    }
     const c = calculate(sim, { year });
     let finalPos = c.liquidationPosition;
     let net = c.netProjectResult;

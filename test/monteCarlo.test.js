@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { DEFAULT_INPUTS } from '../src/domain/defaults.js';
-import { randomNormal, runMonteCarlo } from '../src/domain/monteCarlo.js';
+import { MC_VARIATIONS, randomNormal, runMonteCarlo } from '../src/domain/monteCarlo.js';
 import { seededRng } from './helpers/rng.js';
 
 afterEach(() => {
@@ -15,6 +15,18 @@ describe('randomNormal', () => {
     const sd = Math.sqrt(xs.reduce((a, b) => a + (b - mean) ** 2, 0) / xs.length);
     expect(mean).toBeCloseTo(10, 1);
     expect(sd).toBeCloseTo(2, 1);
+  });
+});
+
+describe('MC_VARIATIONS', () => {
+  it('lists 15 distinct scenario inputs, each with a spread to show on screen', () => {
+    const keys = MC_VARIATIONS.map((v) => v.key);
+    expect(new Set(keys).size).toBe(15);
+    for (const v of MC_VARIATIONS) {
+      expect(DEFAULT_INPUTS).toHaveProperty(v.key);
+      expect(v.spread).toMatch(/^±/);
+      expect((v.rel != null) !== (v.abs != null)).toBe(true);
+    }
   });
 });
 
