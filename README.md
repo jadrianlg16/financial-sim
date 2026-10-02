@@ -4,17 +4,17 @@
 
 It is for someone in Mexico deciding whether to buy a car (new or used, cash or credit) and cover it by driving for a ride-hailing platform, or who just wants the real cost of owning it. You enter the car, the financing and your city; the app works out the month-by-month cash flow, how many trips and hours a week you need to break even, and how likely the plan is to hold up when fares, fuel and resale value move.
 
-![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white) ![Vite 6](https://img.shields.io/badge/Vite-6-646CFF?logo=vite&logoColor=white) ![Recharts 2](https://img.shields.io/badge/Recharts-2-22B5BF) ![JavaScript](https://img.shields.io/badge/JavaScript-no%20TypeScript-F7DF1E?logo=javascript&logoColor=black)
+![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white) ![Vite 6](https://img.shields.io/badge/Vite-6-646CFF?logo=vite&logoColor=white) ![Recharts 2](https://img.shields.io/badge/Recharts-2-22B5BF)
 
-**Live demo:** https://www.adriangaona.dev/demos/financial-sim/ · [Project page](https://www.adriangaona.dev/work/financial-sim)
+**[Live demo](https://www.adriangaona.dev/demos/financial-sim/)** · [Project page](https://www.adriangaona.dev/work/financial-sim)
 
-> **The UI is in Spanish on purpose.** The target user is in Mexico, so amounts are in MXN and the defaults (fares, fuel and electricity prices, platform commission, RESICO tax withholding) are Mexican. This README is in English. The app's own header calls it **AutoPilot**; the repo and portfolio call it Financial Sim.
+> **The UI is in Spanish on purpose.** The target user is in Mexico, so amounts are in MXN and the defaults (fares, fuel and electricity prices, platform commission, RESICO tax withholding) are Mexican. This README is in English. In the app, the header reads **Auto·Pilot** and the browser tab reads *Auto-Pilot Uber Car Simulator*; the repo and portfolio call it Financial Sim.
 
 ![Dashboard of the simulator: input sidebar on the left, a "Viable y manejable" verdict, and the purchase-decision summary with total cost of ownership, cost per km, equivalent annual cost, NPV and real credit cost cards](docs/screenshot-dashboard.png)
 
-| Sensitivity analysis | Monte Carlo |
+| Sensitivity analysis | Monte Carlo (part-time driver) |
 |---|---|
-| ![Sensitivity tab: tornado chart ranking how far each input moves the monthly break-even trips when it changes by 15 to 40 percent](docs/screenshot-sensitivity.png) | ![Monte Carlo tab after 3,000 runs: success probability, P10/P50/P90 for trips per month, liquidation value and net result, and a histogram of break-even trips](docs/screenshot-monte-carlo.png) |
+| ![Sensitivity tab: tornado chart ranking how far each input moves the monthly break-even trips when it changes by 15 to 40 percent](docs/screenshot-sensitivity.png) | ![Monte Carlo tab after 3,000 runs for the default car driven part-time (3 hours a day, 20 days a month): 72% probability that the plan works, P10/P50/P90 for trips per month, liquidation value and net result, and a histogram of break-even trips](docs/screenshot-monte-carlo.png) |
 
 ## Contents
 
@@ -46,7 +46,7 @@ It is for someone in Mexico deciding whether to buy a car (new or used, cash or 
 
 React 19, Vite 6, Recharts 2 and lucide-react, written in plain JavaScript (JSX) with no TypeScript.
 
-- **Static and client-only.** There is no backend. The build is a static bundle that nginx (see the `Dockerfile`) or any static host can serve, and your figures stay in your browser. The only third-party request the app makes is for three font families from Google Fonts.
+- **Static and client-only.** There is no backend. The build is a static bundle that nginx (see the `Dockerfile`) or any static host can serve, and your figures stay in your browser. The only third-party request the app itself makes is for three font families from Google Fonts.
 - **The model is separate from the UI.** `src/domain/` is plain JavaScript with no React imports, and `src/components/` only presents what it returns. That keeps the math runnable outside a browser and ready for unit tests. [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) has the layer map and the dependency rule.
 - **The copy is separate from the code.** Tooltip, glossary and source-label text live in `src/content/`, because the explanations are the product for someone who doesn't know finance.
 - **Storage can't break the app.** Every `localStorage` read and write is wrapped in `try/catch` (`src/storage/persistence.js`, `src/App.jsx`, `src/components/Sidebar.jsx`), so private mode or full storage only loses persistence, never the calculation.
@@ -144,13 +144,12 @@ Dockerfile                    build with Node, serve dist/ with nginx
 ## Limitations
 
 - **Spanish-only UI, MXN only, Mexico-specific defaults.** Car prices, city fares, fuel and electricity prices, the platform commission and the tax regimes are fixed Mexican numbers in `constants.js` and `defaults.js`, not live market data.
-- **The current year is hardcoded.** Year labels are `2025 + n` and car age is `2026 − model year` (`calculate.js:266` and `:316`, `depreciation.js:7`, `Report.jsx:14` and `:16`, plus the same pattern in `Dashboard.jsx` and `Comparison.jsx`). From 2027 on, the labels and used-car ages will be off by a year.
+- **Year labels and used-car ages assume 2026, so they drift from 2027.**
 - **No automated tests** (see [Tests](#tests)).
 - **One 840 kB JavaScript bundle** (about 235 kB gzipped) with no code splitting, and `vite build` warns about it.
 - **Monte Carlo runs on the main thread and is unseeded.** The page pauses during a run, and results vary from run to run.
 - **Simplified operating model.** Income is average fare × trips, a month is 30 days, and per-km maintenance assumes a 20,000 km/year baseline. The tool supports a decision; it is not financial advice.
 - **Imported cases are only as good as the LLM's answer.** The app lists the sources it gets back but cannot verify them.
-- **Hosted demo:** the demo site is served through Cloudflare, which injects its Web Analytics beacon into the page. That script is not part of this repo; running locally avoids it.
 
 ## Background
 

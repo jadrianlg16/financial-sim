@@ -8,7 +8,7 @@ your machine.
 
 ## Layers
 
-```
+```text
 src/
   main.jsx            entry point — mounts <App/>
   App.jsx             tab routing, top-level state, localStorage persistence
@@ -22,7 +22,7 @@ src/
 
 The dependency rule is one-directional:
 
-```
+```text
 components/ ──▶ domain/ ──▶ (nothing)
      │              ▲
      └──▶ content/ ─┘
