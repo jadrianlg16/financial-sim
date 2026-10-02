@@ -1,6 +1,6 @@
 import { HelpCircle } from 'lucide-react';
 import { GLOSSARY_LABELS, GLOSSARY_SECTIONS } from '../content/glossary.js';
-import { TIPS } from '../content/tips.jsx';
+import { TIPS } from '../content/tips.js';
 
 // ============================================================================
 // PÁGINA: GLOSARIO
@@ -10,7 +10,7 @@ import { TIPS } from '../content/tips.jsx';
 // GLOSSARY_SECTIONS los agrupa por tema; un término que no esté en ninguna sección
 // cae en "Otros", así ninguna definición se pierde.
 // ============================================================================
-export const humanizeSlug = (k) =>
+const humanizeSlug = (k) =>
   k
     .replace(/([A-Z])/g, ' $1')
     .replace(/^./, (c) => c.toUpperCase())

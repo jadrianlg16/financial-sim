@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { BarChart3, Dice5 } from 'lucide-react';
 import { Info } from './ui/Info.jsx';
-import { TIPS } from '../content/tips.jsx';
+import { TIPS } from '../content/tips.js';
 import { fmtMXN, fmtN, fmtPct } from '../domain/format.js';
 import { MC_VARIATIONS, runMonteCarlo } from '../domain/monteCarlo.js';
 

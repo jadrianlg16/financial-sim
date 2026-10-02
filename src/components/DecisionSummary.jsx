@@ -1,6 +1,6 @@
 import { Calculator } from 'lucide-react';
 import { Info } from './ui/Info.jsx';
-import { TIPS } from '../content/tips.jsx';
+import { TIPS } from '../content/tips.js';
 import { fmtFixed, fmtMXN, fmtN, fmtPct } from '../domain/format.js';
 
 // ============================================================================

@@ -19,7 +19,7 @@ import { DecisionSummary } from './DecisionSummary.jsx';
 import { IncomeImpact } from './IncomeImpact.jsx';
 import { Verdict } from './Verdict.jsx';
 import { Info } from './ui/Info.jsx';
-import { TIPS } from '../content/tips.jsx';
+import { TIPS } from '../content/tips.js';
 import { fmtFixed, fmtMXN, fmtN, fmtPct } from '../domain/format.js';
 import { projectionYear } from '../domain/year.js';
 

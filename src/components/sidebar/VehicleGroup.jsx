@@ -3,7 +3,7 @@ import { Field } from '../ui/Field.jsx';
 import { Group } from '../ui/Group.jsx';
 import { Info } from '../ui/Info.jsx';
 import { Segmented } from '../ui/Segmented.jsx';
-import { TIPS } from '../../content/tips.jsx';
+import { TIPS } from '../../content/tips.js';
 import { applyCarPresetTo } from '../../domain/compare.js';
 import { CAR_PRESETS } from '../../domain/constants.js';
 import { fmtN, fmtPct } from '../../domain/format.js';
