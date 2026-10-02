@@ -34,13 +34,13 @@ import { projectionYear } from '../domain/year.js';
 // la deuda. Una tabla clasifica cada costo como fijo o variable y directo o
 // indirecto.
 // ============================================================================
-export const Dashboard = ({ R, inputs }) => {
-  const cashflowChart = R.cashflow.map((r) => ({
+export const Dashboard = ({ result, inputs }) => {
+  const cashflowChart = result.cashflow.map((r) => ({
     year: r.year,
     Valor: Math.round(r.depValue),
     Deuda: Math.round(r.debtRemaining),
   }));
-  const cumSpendChart = R.cashflow.map((r) => ({
+  const cumSpendChart = result.cashflow.map((r) => ({
     year: r.year,
     'Auto / crédito': r.cCar,
     Combustible: r.cEnergy,
@@ -56,68 +56,74 @@ export const Dashboard = ({ R, inputs }) => {
         : 'Combustible';
   const costBreakdown = [
     inputs.purchaseMode !== 'cash' && {
-      name: R.isLease ? 'Renta mensual' : 'Mensualidad crédito',
-      value: R.monthlyPayment,
+      name: result.isLease ? 'Renta mensual' : 'Mensualidad crédito',
+      value: result.monthlyPayment,
       color: '#b8431f',
       tipo: 'Fijo',
       dir: 'Directo',
     },
-    { name: fuelName, value: R.monthlyFuel, color: '#d65a30', tipo: 'Variable', dir: 'Directo' },
-    { name: 'Seguro', value: R.monthlyIns, color: '#a87819', tipo: 'Fijo', dir: 'Directo' },
+    {
+      name: fuelName,
+      value: result.monthlyFuel,
+      color: '#d65a30',
+      tipo: 'Variable',
+      dir: 'Directo',
+    },
+    { name: 'Seguro', value: result.monthlyIns, color: '#a87819', tipo: 'Fijo', dir: 'Directo' },
     {
       name: 'Refrendo/Tenencia',
-      value: R.monthlyRefrendo,
+      value: result.monthlyRefrendo,
       color: '#6b3d8a',
       tipo: 'Fijo',
       dir: 'Directo',
     },
     {
       name: 'Mantenimiento',
-      value: R.monthlyMaint,
+      value: result.monthlyMaint,
       color: '#1f4d8a',
       tipo: 'Variable',
       dir: 'Directo',
     },
-    R.monthlyData > 0 && {
+    result.monthlyData > 0 && {
       name: 'Datos móviles',
-      value: R.monthlyData,
+      value: result.monthlyData,
       color: '#7a6e5e',
       tipo: 'Fijo',
       dir: 'Directo',
     },
-    R.monthlyCarWash > 0 && {
+    result.monthlyCarWash > 0 && {
       name: 'Lavado',
-      value: R.monthlyCarWash,
+      value: result.monthlyCarWash,
       color: '#0e6b6b',
       tipo: 'Variable',
       dir: 'Indirecto',
     },
-    R.monthlyTips > 0 && {
+    result.monthlyTips > 0 && {
       name: 'Propinas',
-      value: R.monthlyTips,
+      value: result.monthlyTips,
       color: '#3a7d44',
       tipo: 'Variable',
       dir: 'Indirecto',
     },
-    R.monthlyMisc > 0 && {
+    result.monthlyMisc > 0 && {
       name: 'Misceláneos',
-      value: R.monthlyMisc,
+      value: result.monthlyMisc,
       color: '#9c6b1f',
       tipo: 'Variable',
       dir: 'Indirecto',
     },
-    R.monthlyAccess > 0 && {
+    result.monthlyAccess > 0 && {
       name: 'Accesorios',
-      value: R.monthlyAccess,
+      value: result.monthlyAccess,
       color: '#8a2727',
       tipo: 'Fijo',
       dir: 'Indirecto',
     },
   ].filter(Boolean);
   const amortChartData =
-    R.amortRows.length > 0
-      ? R.amortRows
-          .filter((_, i) => i % 3 === 0 || i === R.amortRows.length - 1)
+    result.amortRows.length > 0
+      ? result.amortRows
+          .filter((_, i) => i % 3 === 0 || i === result.amortRows.length - 1)
           .map((r) => ({
             month: r.month,
             Capital: Math.round(r.cumPrin),
@@ -129,8 +135,8 @@ export const Dashboard = ({ R, inputs }) => {
 
   return (
     <>
-      <Verdict R={R} inputs={inputs} />
-      {!R.isUberMode && R.evRangeShortfall && (
+      <Verdict result={result} inputs={inputs} />
+      {!result.isUberMode && result.evRangeShortfall && (
         <div className="verdict bad" style={{ marginTop: -12 }}>
           <div className="verdict-icon">
             <Battery size={22} color="var(--neg)" />
@@ -138,54 +144,54 @@ export const Dashboard = ({ R, inputs }) => {
           <div>
             <div className="verdict-text">Autonomía eléctrica ajustada</div>
             <div className="verdict-sub">
-              Manejas {fmtN(R.totalDailyKm)} km/día pero una carga rinde ~{fmtN(R.dailyRangeKm)} km.
-              Esto bloquea la viabilidad hasta ajustar batería, carga, km por viaje o días de
-              trabajo.
+              Manejas {fmtN(result.totalDailyKm)} km/día pero una carga rinde ~
+              {fmtN(result.dailyRangeKm)} km. Esto bloquea la viabilidad hasta ajustar batería,
+              carga, km por viaje o días de trabajo.
             </div>
           </div>
         </div>
       )}
-      <DecisionSummary R={R} inputs={inputs} />
-      <IncomeImpact R={R} inputs={inputs} />
+      <DecisionSummary result={result} inputs={inputs} />
+      <IncomeImpact result={result} inputs={inputs} />
       <div className="kpi-grid">
         <div className="kpi">
           <div className="kpi-label">
             Desembolso inicial{' '}
             <Info text="Todo lo que pagas el primer día: enganche/efectivo + comisión de apertura + trámites iniciales de Uber + gastos de adquisición." />
           </div>
-          <div className="kpi-value mono">{fmtMXN(R.upfrontCash)}</div>
+          <div className="kpi-value mono">{fmtMXN(result.upfrontCash)}</div>
           <div className="kpi-sub">
             {inputs.purchaseMode === 'cash'
               ? 'Pago de contado'
               : inputs.purchaseMode === 'hybrid'
                 ? 'Mixto efectivo + crédito'
-                : `${fmtPct(R.cashPaid / inputs.carPrice, 0)} enganche`}
-            {R.oneTimeUberCosts > 0 && ` + ${fmtMXN(R.oneTimeUberCosts)} trámites`}
+                : `${fmtPct(result.cashPaid / inputs.carPrice, 0)} enganche`}
+            {result.oneTimeUberCosts > 0 && ` + ${fmtMXN(result.oneTimeUberCosts)} trámites`}
           </div>
         </div>
-        {R.financed > 0 && (
+        {result.financed > 0 && (
           <>
             <div className="kpi">
               <div className="kpi-label">
-                {R.isBalloon ? 'Mensualidad (con globo)' : 'Mensualidad'}{' '}
+                {result.isBalloon ? 'Mensualidad (con globo)' : 'Mensualidad'}{' '}
                 <Info text={TIPS.monthlyPayment} />
               </div>
-              <div className="kpi-value mono">{fmtMXN(R.monthlyPayment)}</div>
+              <div className="kpi-value mono">{fmtMXN(result.monthlyPayment)}</div>
               <div className="kpi-sub">
-                {R.isBalloon
-                  ? `× ${R.months} meses · menor por el residual`
-                  : `× ${R.months} meses`}
+                {result.isBalloon
+                  ? `× ${result.months} meses · menor por el residual`
+                  : `× ${result.months} meses`}
               </div>
             </div>
-            {R.isBalloon && (
+            {result.isBalloon && (
               <div className="kpi accent">
                 <div className="kpi-label">
                   Pago final (globo){' '}
                   <Info text="Valor residual no amortizado que pagas (o refinancias) al final del plazo para quedarte el auto, o que saldas vendiéndolo." />
                 </div>
-                <div className="kpi-value mono">{fmtMXN(R.balloonPayment)}</div>
+                <div className="kpi-value mono">{fmtMXN(result.balloonPayment)}</div>
                 <div className="kpi-sub">
-                  en el mes {R.months} · {fmtPct(R.balloonPct, 0)} del financiado
+                  en el mes {result.months} · {fmtPct(result.balloonPct, 0)} del financiado
                 </div>
               </div>
             )}
@@ -193,22 +199,22 @@ export const Dashboard = ({ R, inputs }) => {
               <div className="kpi-label">
                 Costo total nominal (VF) <Info text={TIPS.vf} />
               </div>
-              <div className="kpi-value mono">{fmtMXN(R.fvTotal)}</div>
+              <div className="kpi-value mono">{fmtMXN(result.fvTotal)}</div>
               <div className="kpi-sub">Suma de TODO lo del crédito</div>
             </div>
             <div className="kpi">
               <div className="kpi-label">
                 Valor presente (VP) <Info text={TIPS.vp} />
               </div>
-              <div className="kpi-value mono">{fmtMXN(R.pvTotal)}</div>
+              <div className="kpi-value mono">{fmtMXN(result.pvTotal)}</div>
               <div className="kpi-sub">Equivalente en dinero de hoy</div>
             </div>
             <div className="kpi accent">
               <div className="kpi-label">
                 Costo del dinero <Info text={TIPS.timeValue} />
               </div>
-              <div className="kpi-value mono">{fmtMXN(R.timeValueOfMoney)}</div>
-              <div className="kpi-sub">Intereses: {fmtMXN(R.totalInterest)}</div>
+              <div className="kpi-value mono">{fmtMXN(result.timeValueOfMoney)}</div>
+              <div className="kpi-sub">Intereses: {fmtMXN(result.totalInterest)}</div>
             </div>
           </>
         )}
@@ -216,30 +222,30 @@ export const Dashboard = ({ R, inputs }) => {
           <div className="kpi-label">
             Costo mensual total <Info text={TIPS.monthlyTotal} />
           </div>
-          <div className="kpi-value mono">{fmtMXN(R.monthlyTotalOperative)}</div>
+          <div className="kpi-value mono">{fmtMXN(result.monthlyTotalOperative)}</div>
           <div className="kpi-sub">todo lo del auto por mes</div>
         </div>
-        {R.isUberMode && (
+        {result.isUberMode && (
           <div className="kpi accent">
             <div className="kpi-label">
               Punto de equilibrio <Info text={TIPS.breakeven} />
             </div>
-            <div className="kpi-value mono">{fmtN(R.breakEvenTrips, 0)}</div>
-            <div className="kpi-sub">viajes/mes · {fmtFixed(R.hoursPerDay)} hrs/día</div>
+            <div className="kpi-value mono">{fmtN(result.breakEvenTrips, 0)}</div>
+            <div className="kpi-sub">viajes/mes · {fmtFixed(result.hoursPerDay)} hrs/día</div>
           </div>
         )}
         <div className="kpi">
           <div className="kpi-label">
             Valor en {projectionYear(inputs.horizonYears)} <Info text={TIPS.depreciation} />
           </div>
-          <div className="kpi-value mono">{fmtMXN(R.valueAtEnd)}</div>
-          <div className="kpi-sub">Esperado al vender: {fmtMXN(R.actualSalePrice)}</div>
+          <div className="kpi-value mono">{fmtMXN(result.valueAtEnd)}</div>
+          <div className="kpi-sub">Esperado al vender: {fmtMXN(result.actualSalePrice)}</div>
         </div>
         <div className="kpi">
           <div className="kpi-label">
             Costo neto del proyecto <Info text={TIPS.totalProject} />
           </div>
-          <div className="kpi-value mono">{fmtMXN(R.totalProjectCost)}</div>
+          <div className="kpi-value mono">{fmtMXN(result.totalProjectCost)}</div>
           <div className="kpi-sub">gasto − (venta − deuda)</div>
         </div>
         <div className="kpi">
@@ -248,41 +254,43 @@ export const Dashboard = ({ R, inputs }) => {
           </div>
           <div
             className="kpi-value mono"
-            style={{ color: R.liquidationPosition >= 0 ? 'var(--pos)' : 'var(--neg)' }}
+            style={{ color: result.liquidationPosition >= 0 ? 'var(--pos)' : 'var(--neg)' }}
           >
-            {fmtMXN(R.liquidationPosition)}
+            {fmtMXN(result.liquidationPosition)}
           </div>
           <div className="kpi-sub">Venta − deuda restante</div>
         </div>
-        {R.isUberMode && (
+        {result.isUberMode && (
           <div className="kpi accent">
             <div className="kpi-label">
               Resultado neto del proyecto <Info text={TIPS.netResult} />
             </div>
             <div
               className="kpi-value mono"
-              style={{ color: R.netProjectResult >= 0 ? 'var(--pos)' : 'var(--neg)' }}
+              style={{ color: result.netProjectResult >= 0 ? 'var(--pos)' : 'var(--neg)' }}
             >
-              {fmtMXN(R.netProjectResult)}
+              {fmtMXN(result.netProjectResult)}
             </div>
             <div className="kpi-sub">ingresos + liquidación − gastos</div>
           </div>
         )}
-        {R.chargingHoursPerDay > 0 && (
+        {result.chargingHoursPerDay > 0 && (
           <div className="kpi electric">
             <div className="kpi-label">Tiempo de carga</div>
-            <div className="kpi-value mono">{fmtFixed(R.chargingHoursPerDay)}</div>
+            <div className="kpi-value mono">{fmtFixed(result.chargingHoursPerDay)}</div>
             <div className="kpi-sub">hrs/día · cargador {inputs.chargerPowerKw} kW</div>
           </div>
         )}
       </div>
 
       <div className="row-2">
-        {R.amortRows.length > 0 ? (
+        {result.amortRows.length > 0 ? (
           <div className="card">
             <div className="card-title">
               <BarChart3 size={11} />{' '}
-              {R.isBalloon ? 'Amortización del crédito (con globo)' : 'Amortización del crédito'}{' '}
+              {result.isBalloon
+                ? 'Amortización del crédito (con globo)'
+                : 'Amortización del crédito'}{' '}
               <Info text={TIPS.amortization} />
             </div>
             <ResponsiveContainer width="100%" height={250}>
@@ -328,42 +336,42 @@ export const Dashboard = ({ R, inputs }) => {
                 />
               </ComposedChart>
             </ResponsiveContainer>
-            {R.isBalloon && (
+            {result.isBalloon && (
               <p style={{ fontSize: 12, color: 'var(--muted)', marginTop: 8, marginBottom: 0 }}>
-                La mensualidad es menor porque {fmtPct(R.balloonPct, 0)} del financiado queda como{' '}
-                <strong>pago final ("globo") de {fmtMXN(R.balloonPayment)}</strong> en el mes{' '}
-                {R.months}; por eso el saldo no llega a cero al amortizar.
+                La mensualidad es menor porque {fmtPct(result.balloonPct, 0)} del financiado queda
+                como <strong>pago final ("globo") de {fmtMXN(result.balloonPayment)}</strong> en el
+                mes {result.months}; por eso el saldo no llega a cero al amortizar.
               </p>
             )}
           </div>
-        ) : R.isLease ? (
+        ) : result.isLease ? (
           <div className="card">
             <div className="card-title">
               <Wallet size={11} /> Arrendamiento (renta)
             </div>
             <p style={{ fontSize: 14, color: 'var(--muted)', marginTop: 0 }}>
               No es un crédito: <strong style={{ color: 'var(--ink)' }}>rentas</strong> el auto por{' '}
-              <strong style={{ color: 'var(--ink)' }}>{fmtMXN(R.monthlyPayment)}/mes</strong>. No
-              eres dueño, así que <strong>no hay reventa ni capital (equity)</strong> a tu favor.
+              <strong style={{ color: 'var(--ink)' }}>{fmtMXN(result.monthlyPayment)}/mes</strong>.
+              No eres dueño, así que <strong>no hay reventa ni capital (equity)</strong> a tu favor.
             </p>
             <table className="tbl" style={{ marginTop: 6 }}>
               <tbody>
                 <tr>
                   <td>Renta mensual</td>
-                  <td className="num">{fmtMXN(R.monthlyPayment)}</td>
+                  <td className="num">{fmtMXN(result.monthlyPayment)}</td>
                 </tr>
                 <tr>
                   <td>Plazo del arrendamiento</td>
-                  <td className="num">{R.months} meses</td>
+                  <td className="num">{result.months} meses</td>
                 </tr>
                 <tr>
                   <td>Enganche/depósito inicial</td>
-                  <td className="num">{fmtMXN(R.cashPaid)}</td>
+                  <td className="num">{fmtMXN(result.cashPaid)}</td>
                 </tr>
-                {R.leaseKmPenaltyYear > 0 && (
+                {result.leaseKmPenaltyYear > 0 && (
                   <tr>
                     <td>Penalización por exceso de km</td>
-                    <td className="num neg">{fmtMXN(R.leaseKmPenaltyYear)}/año</td>
+                    <td className="num neg">{fmtMXN(result.leaseKmPenaltyYear)}/año</td>
                   </tr>
                 )}
                 <tr>
@@ -383,13 +391,13 @@ export const Dashboard = ({ R, inputs }) => {
             </div>
             <p style={{ fontSize: 14, color: 'var(--muted)', marginTop: 0 }}>
               No hay financiamiento. Pagaste{' '}
-              <strong style={{ color: 'var(--ink)' }}>{fmtMXN(R.cashPaid)}</strong> al momento de la
-              compra.
+              <strong style={{ color: 'var(--ink)' }}>{fmtMXN(result.cashPaid)}</strong> al momento
+              de la compra.
             </p>
             <p style={{ fontSize: 12, color: 'var(--muted)' }}>
               <strong>Costo de oportunidad:</strong> ese dinero invertido en CETES (~10% anual)
               generaría aproximadamente{' '}
-              <strong>{fmtMXN(R.cashPaid * 0.1 * inputs.horizonYears)}</strong> en{' '}
+              <strong>{fmtMXN(result.cashPaid * 0.1 * inputs.horizonYears)}</strong> en{' '}
               {inputs.horizonYears} años.
             </p>
           </div>
@@ -431,7 +439,7 @@ export const Dashboard = ({ R, inputs }) => {
               fontSize: 12,
             }}
           >
-            Total mensual: <strong>{fmtMXN(R.monthlyTotalOperative)}</strong>
+            Total mensual: <strong>{fmtMXN(result.monthlyTotalOperative)}</strong>
           </div>
         </div>
       </div>
@@ -482,8 +490,8 @@ export const Dashboard = ({ R, inputs }) => {
             fontSize: 12,
           }}
         >
-          Gasto bruto total: <strong>{fmtMXN(R.totalSpentGross)}</strong> · Neto tras vender:{' '}
-          <strong>{fmtMXN(R.totalProjectCost)}</strong>
+          Gasto bruto total: <strong>{fmtMXN(result.totalSpentGross)}</strong> · Neto tras vender:{' '}
+          <strong>{fmtMXN(result.totalProjectCost)}</strong>
         </div>
       </div>
 
@@ -527,7 +535,7 @@ export const Dashboard = ({ R, inputs }) => {
                 <td className="num">{fmtMXN(c.value * 12)}</td>
               </tr>
             ))}
-            {R.oneTimeUberCosts > 0 && (
+            {result.oneTimeUberCosts > 0 && (
               <tr style={{ background: 'var(--bg-2)' }}>
                 <td style={{ fontFamily: 'Manrope', fontWeight: 500 }}>
                   <span
@@ -545,7 +553,7 @@ export const Dashboard = ({ R, inputs }) => {
                 <td>Único</td>
                 <td>Directo</td>
                 <td className="num">—</td>
-                <td className="num">{fmtMXN(R.oneTimeUberCosts)}</td>
+                <td className="num">{fmtMXN(result.oneTimeUberCosts)}</td>
               </tr>
             )}
           </tbody>
@@ -590,7 +598,7 @@ export const Dashboard = ({ R, inputs }) => {
         </ResponsiveContainer>
       </div>
 
-      {R.isUberMode && (
+      {result.isUberMode && (
         <div className="card">
           <div className="card-title">
             <Activity size={11} /> Plan de operación sugerido{' '}
@@ -600,18 +608,18 @@ export const Dashboard = ({ R, inputs }) => {
             <tbody>
               <tr>
                 <td>Ingreso neto antes de km</td>
-                <td className="num pos">{fmtMXN(R.netRevenuePerTrip, 2)}</td>
+                <td className="num pos">{fmtMXN(result.netRevenuePerTrip, 2)}</td>
                 <td>
-                  Tarifa {fmtMXN(R.grossPerTrip)} − Uber {fmtMXN(R.platformCommission, 2)} −
-                  impuesto bruto {fmtMXN(R.taxAmountPerTrip, 2)}
+                  Tarifa {fmtMXN(result.grossPerTrip)} − Uber {fmtMXN(result.platformCommission, 2)}{' '}
+                  − impuesto bruto {fmtMXN(result.taxAmountPerTrip, 2)}
                 </td>
               </tr>
               <tr>
                 <td>(−) Costo variable por viaje</td>
-                <td className="num neg">{fmtMXN(R.variableCostPerTrip, 2)}</td>
+                <td className="num neg">{fmtMXN(result.variableCostPerTrip, 2)}</td>
                 <td>
-                  {fmtN(R.kmPerTrip, 1)} km/viaje × (energía + mantenimiento base/km con desgaste
-                  Uber)
+                  {fmtN(result.kmPerTrip, 1)} km/viaje × (energía + mantenimiento base/km con
+                  desgaste Uber)
                 </td>
               </tr>
               <tr>
@@ -619,32 +627,32 @@ export const Dashboard = ({ R, inputs }) => {
                   <strong>Contribución por viaje</strong> <Info text={TIPS.kmPerTrip} />
                 </td>
                 <td className="num">
-                  <strong>{fmtMXN(R.netContributionPerTrip, 2)}</strong>
+                  <strong>{fmtMXN(result.netContributionPerTrip, 2)}</strong>
                 </td>
                 <td>lo que cada viaje aporta a cubrir fijos</td>
               </tr>
               <tr>
                 <td>Equilibrio operativo</td>
-                <td className="num">{fmtN(R.operatingBreakEvenTrips, 0)}</td>
-                <td>Sólo costos mensuales: {fmtMXN(R.operatingFixedMonthlyCosts)}</td>
+                <td className="num">{fmtN(result.operatingBreakEvenTrips, 0)}</td>
+                <td>Sólo costos mensuales: {fmtMXN(result.operatingFixedMonthlyCosts)}</td>
               </tr>
               <tr>
                 <td>Viajes/mes objetivo</td>
                 <td className="num">
-                  <strong>{fmtN(R.breakEvenTrips, 0)}</strong>
+                  <strong>{fmtN(result.breakEvenTrips, 0)}</strong>
                 </td>
                 <td>
-                  Operativo {fmtMXN(R.operatingFixedMonthlyCosts)}
-                  {R.projectRecoveryMonthly > 0 &&
-                    ` + recuperación proyecto ${fmtMXN(R.projectRecoveryMonthly)}`}
-                  {R.profitTarget > 0 && ` + meta ${fmtMXN(R.profitTarget)}`}
+                  Operativo {fmtMXN(result.operatingFixedMonthlyCosts)}
+                  {result.projectRecoveryMonthly > 0 &&
+                    ` + recuperación proyecto ${fmtMXN(result.projectRecoveryMonthly)}`}
+                  {result.profitTarget > 0 && ` + meta ${fmtMXN(result.profitTarget)}`}
                 </td>
               </tr>
               <tr>
                 <td>Viajes por día</td>
-                <td className="num">{fmtFixed(R.tripsPerDay)}</td>
+                <td className="num">{fmtFixed(result.tripsPerDay)}</td>
                 <td>
-                  en {inputs.workDaysPerMonth} días/mes · {fmtN(R.uberMonthlyKm)} km Uber/mes
+                  en {inputs.workDaysPerMonth} días/mes · {fmtN(result.uberMonthlyKm)} km Uber/mes
                 </td>
               </tr>
               <tr>
@@ -652,7 +660,7 @@ export const Dashboard = ({ R, inputs }) => {
                   <strong>Horas por día</strong>
                 </td>
                 <td className="num">
-                  <strong>{fmtFixed(R.hoursPerDay)} hrs</strong>
+                  <strong>{fmtFixed(result.hoursPerDay)} hrs</strong>
                 </td>
                 <td>a {inputs.tripsPerHour} viajes/hora</td>
               </tr>
@@ -661,23 +669,23 @@ export const Dashboard = ({ R, inputs }) => {
                   <strong>Horas por semana</strong>
                 </td>
                 <td className="num">
-                  <strong>{fmtFixed(R.hoursPerWeek)} hrs</strong>
+                  <strong>{fmtFixed(result.hoursPerWeek)} hrs</strong>
                 </td>
                 <td>
-                  {fmtFixed(R.weeklyDays)} días/sem × {fmtFixed(R.hoursPerDay)} hrs/día
+                  {fmtFixed(result.weeklyDays)} días/sem × {fmtFixed(result.hoursPerDay)} hrs/día
                 </td>
               </tr>
               <tr>
                 <td>
                   Capacidad utilizada <Info text={TIPS.capacity} />
                 </td>
-                <td className="num">{fmtPct(R.capacityUsage, 1)}</td>
-                <td>Tope: {fmtN(R.maxTripsMonth)} viajes/mes</td>
+                <td className="num">{fmtPct(result.capacityUsage, 1)}</td>
+                <td>Tope: {fmtN(result.maxTripsMonth)} viajes/mes</td>
               </tr>
-              {R.chargingHoursPerDay > 0 && (
+              {result.chargingHoursPerDay > 0 && (
                 <tr>
                   <td>Carga eléctrica diaria</td>
-                  <td className="num">{fmtFixed(R.chargingHoursPerDay)} hrs</td>
+                  <td className="num">{fmtFixed(result.chargingHoursPerDay)} hrs</td>
                   <td>Te resta tiempo de trabajo</td>
                 </tr>
               )}

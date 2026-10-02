@@ -10,8 +10,8 @@ import { fmtFixed, fmtMXN, fmtN } from '../domain/format.js';
 //                viaje, autonomía o carga del EV, horas insuficientes, o más de
 //                4 viajes por hora, que no es realista).
 // ============================================================================
-export const Verdict = ({ R, inputs }) => {
-  if (!R.isUberMode) {
+export const Verdict = ({ result, inputs }) => {
+  if (!result.isUberMode) {
     return (
       <div className="verdict warn">
         <div className="verdict-icon">
@@ -19,18 +19,19 @@ export const Verdict = ({ R, inputs }) => {
         </div>
         <div>
           <div className="verdict-text">
-            Tener el auto cuesta <span className="mono">{fmtMXN(R.monthlyTotalOperative)}</span>/mes
+            Tener el auto cuesta{' '}
+            <span className="mono">{fmtMXN(result.monthlyTotalOperative)}</span>/mes
           </div>
           <div className="verdict-sub">
-            En {inputs.horizonYears} años gastarás {fmtMXN(R.totalSpentGross)} en total. Al vender
-            el auto recuperas {fmtMXN(R.terminalRecovery)} (venta − deuda), dejando un costo neto de{' '}
-            <strong>{fmtMXN(R.totalProjectCost)}</strong>.
+            En {inputs.horizonYears} años gastarás {fmtMXN(result.totalSpentGross)} en total. Al
+            vender el auto recuperas {fmtMXN(result.terminalRecovery)} (venta − deuda), dejando un
+            costo neto de <strong>{fmtMXN(result.totalProjectCost)}</strong>.
           </div>
         </div>
       </div>
     );
   }
-  if (R.tripsPerHourWarn) {
+  if (result.tripsPerHourWarn) {
     return (
       <div className="verdict bad">
         <div className="verdict-icon">
@@ -43,7 +44,7 @@ export const Verdict = ({ R, inputs }) => {
       </div>
     );
   }
-  if (R.netContributionPerTrip <= 0) {
+  if (result.netContributionPerTrip <= 0) {
     return (
       <div className="verdict bad">
         <div className="verdict-icon">
@@ -52,14 +53,14 @@ export const Verdict = ({ R, inputs }) => {
         <div>
           <div className="verdict-text">Cada viaje pierde dinero</div>
           <div className="verdict-sub">
-            La contribución por viaje es {fmtMXN(R.netContributionPerTrip, 2)} después de comisión,
-            impuesto bruto, energía y mantenimiento. Sube tarifa o baja costos/km.
+            La contribución por viaje es {fmtMXN(result.netContributionPerTrip, 2)} después de
+            comisión, impuesto bruto, energía y mantenimiento. Sube tarifa o baja costos/km.
           </div>
         </div>
       </div>
     );
   }
-  if (R.evRangeShortfall) {
+  if (result.evRangeShortfall) {
     return (
       <div className="verdict bad">
         <div className="verdict-icon">
@@ -68,15 +69,15 @@ export const Verdict = ({ R, inputs }) => {
         <div>
           <div className="verdict-text">La autonomía eléctrica no alcanza</div>
           <div className="verdict-sub">
-            El plan requiere {fmtN(R.totalDailyKm)} km/día, pero una carga útil rinde ~
-            {fmtN(R.dailyRangeKm)} km. Ajusta batería, km por viaje, días u horas antes de
+            El plan requiere {fmtN(result.totalDailyKm)} km/día, pero una carga útil rinde ~
+            {fmtN(result.dailyRangeKm)} km. Ajusta batería, km por viaje, días u horas antes de
             considerarlo viable.
           </div>
         </div>
       </div>
     );
   }
-  if (R.chargingExceedsAvailableHours) {
+  if (result.chargingExceedsAvailableHours) {
     return (
       <div className="verdict bad">
         <div className="verdict-icon">
@@ -85,14 +86,14 @@ export const Verdict = ({ R, inputs }) => {
         <div>
           <div className="verdict-text">La carga consume la jornada disponible</div>
           <div className="verdict-sub">
-            La carga requiere {fmtFixed(R.chargingHoursPerDay)} hrs/día y sólo tienes{' '}
+            La carga requiere {fmtFixed(result.chargingHoursPerDay)} hrs/día y sólo tienes{' '}
             {fmtFixed(inputs.maxHoursPerDay)} hrs/día disponibles.
           </div>
         </div>
       </div>
     );
   }
-  if (!R.feasible) {
+  if (!result.feasible) {
     return (
       <div className="verdict bad">
         <div className="verdict-icon">
@@ -101,16 +102,16 @@ export const Verdict = ({ R, inputs }) => {
         <div>
           <div className="verdict-text">No alcanzan las horas del día</div>
           <div className="verdict-sub">
-            Necesitas {fmtN(R.breakEvenTrips)} viajes/mes pero el máximo posible es{' '}
-            {fmtN(R.maxTripsMonth)}.
-            {R.chargingHoursPerDay > 0.5 &&
-              ` (La carga eléctrica consume ${fmtFixed(R.chargingHoursPerDay)} hrs/día.)`}
+            Necesitas {fmtN(result.breakEvenTrips)} viajes/mes pero el máximo posible es{' '}
+            {fmtN(result.maxTripsMonth)}.
+            {result.chargingHoursPerDay > 0.5 &&
+              ` (La carga eléctrica consume ${fmtFixed(result.chargingHoursPerDay)} hrs/día.)`}
           </div>
         </div>
       </div>
     );
   }
-  if (R.hoursPerDay > 5) {
+  if (result.hoursPerDay > 5) {
     return (
       <div className="verdict warn">
         <div className="verdict-icon">
@@ -118,11 +119,11 @@ export const Verdict = ({ R, inputs }) => {
         </div>
         <div>
           <div className="verdict-text">
-            Es viable, pero pesado: {fmtFixed(R.hoursPerDay)} hrs/día
+            Es viable, pero pesado: {fmtFixed(result.hoursPerDay)} hrs/día
           </div>
           <div className="verdict-sub">
-            {fmtN(R.breakEvenTrips)} viajes/mes · {fmtFixed(R.hoursPerWeek)} hrs/semana · podrías
-            ganar {fmtMXN(R.safetyMargin)} extra al máximo
+            {fmtN(result.breakEvenTrips)} viajes/mes · {fmtFixed(result.hoursPerWeek)} hrs/semana ·
+            podrías ganar {fmtMXN(result.safetyMargin)} extra al máximo
           </div>
         </div>
       </div>
@@ -136,9 +137,9 @@ export const Verdict = ({ R, inputs }) => {
       <div>
         <div className="verdict-text">Viable y manejable</div>
         <div className="verdict-sub">
-          {fmtFixed(R.hoursPerDay)} hrs/día · {fmtFixed(R.weeklyDays)} días/sem ·{' '}
-          {fmtFixed(R.hoursPerWeek)} hrs/sem total · holgura para ganar {fmtMXN(R.safetyMargin)}{' '}
-          extra
+          {fmtFixed(result.hoursPerDay)} hrs/día · {fmtFixed(result.weeklyDays)} días/sem ·{' '}
+          {fmtFixed(result.hoursPerWeek)} hrs/sem total · holgura para ganar{' '}
+          {fmtMXN(result.safetyMargin)} extra
         </div>
       </div>
     </div>

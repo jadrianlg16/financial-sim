@@ -3,7 +3,7 @@ import { fmtMXN, fmtPct } from '../../domain/format.js';
 
 // Escenarios de liquidación, supuestos del análisis, fuentes de un caso importado
 // y notas del usuario.
-export const ReportAssumptions = ({ R, inputs, labels, sources }) => (
+export const ReportAssumptions = ({ result, inputs, labels, sources }) => (
   <>
     <h2>Escenarios de liquidación</h2>
     <table className="tbl">
@@ -15,17 +15,17 @@ export const ReportAssumptions = ({ R, inputs, labels, sources }) => (
         </tr>
       </thead>
       <tbody>
-        <tr style={{ background: R.remainingDebt === 0 ? 'var(--bg-2)' : 'transparent' }}>
+        <tr style={{ background: result.remainingDebt === 0 ? 'var(--bg-2)' : 'transparent' }}>
           <td>Crédito ya pagado</td>
           <td style={{ fontFamily: 'Manrope' }}>Horizonte ≥ plazo del crédito</td>
           <td className="num pos">
-            {R.remainingDebt === 0 ? `Ganancia: ${fmtMXN(R.actualSalePrice)}` : '—'}
+            {result.remainingDebt === 0 ? `Ganancia: ${fmtMXN(result.actualSalePrice)}` : '—'}
           </td>
         </tr>
         <tr
           style={{
             background:
-              R.remainingDebt > 0 && R.actualSalePrice >= R.remainingDebt
+              result.remainingDebt > 0 && result.actualSalePrice >= result.remainingDebt
                 ? 'var(--bg-2)'
                 : 'transparent',
           }}
@@ -33,15 +33,15 @@ export const ReportAssumptions = ({ R, inputs, labels, sources }) => (
           <td>Crédito vivo, venta cubre saldo</td>
           <td style={{ fontFamily: 'Manrope' }}>Valor venta ≥ saldo restante</td>
           <td className="num">
-            {R.remainingDebt > 0 && R.actualSalePrice >= R.remainingDebt
-              ? `Ganancia: ${fmtMXN(R.finalPosition)}`
+            {result.remainingDebt > 0 && result.actualSalePrice >= result.remainingDebt
+              ? `Ganancia: ${fmtMXN(result.finalPosition)}`
               : '—'}
           </td>
         </tr>
         <tr
           style={{
             background:
-              R.remainingDebt > 0 && R.actualSalePrice < R.remainingDebt
+              result.remainingDebt > 0 && result.actualSalePrice < result.remainingDebt
                 ? 'var(--bg-2)'
                 : 'transparent',
           }}
@@ -49,8 +49,8 @@ export const ReportAssumptions = ({ R, inputs, labels, sources }) => (
           <td>Crédito vivo, déficit</td>
           <td style={{ fontFamily: 'Manrope' }}>Valor venta &lt; saldo restante</td>
           <td className="num neg">
-            {R.remainingDebt > 0 && R.actualSalePrice < R.remainingDebt
-              ? `Déficit: ${fmtMXN(Math.abs(R.finalPosition))}`
+            {result.remainingDebt > 0 && result.actualSalePrice < result.remainingDebt
+              ? `Déficit: ${fmtMXN(Math.abs(result.finalPosition))}`
               : '—'}
           </td>
         </tr>
@@ -63,15 +63,15 @@ export const ReportAssumptions = ({ R, inputs, labels, sources }) => (
           <td>Tipo de financiamiento</td>
           <td className="num">{labels.financeLabel}</td>
         </tr>
-        {R.isBalloon && (
+        {result.isBalloon && (
           <tr>
             <td>Pago final (globo)</td>
             <td className="num">
-              {fmtMXN(R.balloonPayment)} en mes {R.months}
+              {fmtMXN(result.balloonPayment)} en mes {result.months}
             </td>
           </tr>
         )}
-        {R.isUberMode && (
+        {result.isUberMode && (
           <tr>
             <td>Régimen fiscal del ingreso</td>
             <td className="num">{labels.taxRegimeLabel}</td>
@@ -83,11 +83,11 @@ export const ReportAssumptions = ({ R, inputs, labels, sources }) => (
         </tr>
         <tr>
           <td>Tasa de descuento (costo de oportunidad)</td>
-          <td className="num">{fmtPct(R.discountAnnual, 1)} anual</td>
+          <td className="num">{fmtPct(result.discountAnnual, 1)} anual</td>
         </tr>
         <tr>
           <td>Inflación general de costos</td>
-          <td className="num">{fmtPct(R.generalInflation, 1)}/año</td>
+          <td className="num">{fmtPct(result.generalInflation, 1)}/año</td>
         </tr>
         <tr>
           <td>Método de depreciación</td>
@@ -98,25 +98,25 @@ export const ReportAssumptions = ({ R, inputs, labels, sources }) => (
         <tr>
           <td>Factor de reventa / costo de venta</td>
           <td className="num">
-            {inputs.salesFactor.toFixed(2)}× · {fmtPct(R.sellingCostPct, 1)}
+            {inputs.salesFactor.toFixed(2)}× · {fmtPct(result.sellingCostPct, 1)}
           </td>
         </tr>
-        {R.tradeInValue > 0 && (
+        {result.tradeInValue > 0 && (
           <tr>
             <td>Auto a cuenta (trade-in)</td>
-            <td className="num">{fmtMXN(R.tradeInValue)}</td>
+            <td className="num">{fmtMXN(result.tradeInValue)}</td>
           </tr>
         )}
-        {R.acquisitionFees > 0 && (
+        {result.acquisitionFees > 0 && (
           <tr>
             <td>Gastos de adquisición</td>
-            <td className="num">{fmtMXN(R.acquisitionFees)}</td>
+            <td className="num">{fmtMXN(result.acquisitionFees)}</td>
           </tr>
         )}
-        {R.totalRepairReserve > 0 && (
+        {result.totalRepairReserve > 0 && (
           <tr>
             <td>Reserva de reparaciones (horizonte)</td>
-            <td className="num">{fmtMXN(R.totalRepairReserve)}</td>
+            <td className="num">{fmtMXN(result.totalRepairReserve)}</td>
           </tr>
         )}
       </tbody>

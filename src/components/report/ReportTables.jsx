@@ -1,7 +1,7 @@
 import { fmtFixed, fmtMXN, fmtN, fmtPct } from '../../domain/format.js';
 
 // Costo total de propiedad por categoría y tabla resumen con todas las cifras clave.
-export const ReportTables = ({ R, inputs, yearEnd, car, vehicleLabel, breakdown }) => (
+export const ReportTables = ({ result, inputs, yearEnd, car, vehicleLabel, breakdown }) => (
   <>
     <h2>Costo total de propiedad ({inputs.horizonYears} años)</h2>
     <table className="tbl">
@@ -23,15 +23,15 @@ export const ReportTables = ({ R, inputs, yearEnd, car, vehicleLabel, breakdown 
             <strong>Gasto bruto total</strong>
           </td>
           <td className="num">
-            <strong>{fmtMXN(R.totalSpentGross)}</strong>
+            <strong>{fmtMXN(result.totalSpentGross)}</strong>
           </td>
         </tr>
         <tr>
           <td>(−/+) Recuperación terminal real (venta − deuda)</td>
-          <td className={`num ${R.terminalRecovery >= 0 ? 'pos' : 'neg'}`}>
-            {R.terminalRecovery >= 0
-              ? `−${fmtMXN(R.terminalRecovery)}`
-              : `+${fmtMXN(Math.abs(R.terminalRecovery))}`}
+          <td className={`num ${result.terminalRecovery >= 0 ? 'pos' : 'neg'}`}>
+            {result.terminalRecovery >= 0
+              ? `−${fmtMXN(result.terminalRecovery)}`
+              : `+${fmtMXN(Math.abs(result.terminalRecovery))}`}
           </td>
         </tr>
         <tr>
@@ -39,7 +39,7 @@ export const ReportTables = ({ R, inputs, yearEnd, car, vehicleLabel, breakdown 
             <strong>Costo neto del proyecto</strong>
           </td>
           <td className="num">
-            <strong>{fmtMXN(R.totalProjectCost)}</strong>
+            <strong>{fmtMXN(result.totalProjectCost)}</strong>
           </td>
         </tr>
       </tbody>
@@ -65,13 +65,13 @@ export const ReportTables = ({ R, inputs, yearEnd, car, vehicleLabel, breakdown 
         </tr>
         <tr>
           <td>Desembolso inicial</td>
-          <td className="num">{fmtMXN(R.upfrontCash)}</td>
+          <td className="num">{fmtMXN(result.upfrontCash)}</td>
         </tr>
-        {R.financed > 0 && (
+        {result.financed > 0 && (
           <>
             <tr>
               <td>Monto financiado</td>
-              <td className="num">{fmtMXN(R.financed)}</td>
+              <td className="num">{fmtMXN(result.financed)}</td>
             </tr>
             <tr>
               <td>Tasa / Plazo</td>
@@ -81,78 +81,78 @@ export const ReportTables = ({ R, inputs, yearEnd, car, vehicleLabel, breakdown 
             </tr>
             <tr>
               <td>Mensualidad</td>
-              <td className="num">{fmtMXN(R.monthlyPayment)}</td>
+              <td className="num">{fmtMXN(result.monthlyPayment)}</td>
             </tr>
             <tr>
               <td>VF (nominal total)</td>
-              <td className="num">{fmtMXN(R.fvTotal)}</td>
+              <td className="num">{fmtMXN(result.fvTotal)}</td>
             </tr>
             <tr>
               <td>VP (descontado)</td>
-              <td className="num">{fmtMXN(R.pvTotal)}</td>
+              <td className="num">{fmtMXN(result.pvTotal)}</td>
             </tr>
             <tr>
               <td>Costo del dinero (VF − VP)</td>
-              <td className="num">{fmtMXN(R.timeValueOfMoney)}</td>
+              <td className="num">{fmtMXN(result.timeValueOfMoney)}</td>
             </tr>
             <tr>
               <td>Intereses pagados</td>
-              <td className="num">{fmtMXN(R.totalInterest)}</td>
+              <td className="num">{fmtMXN(result.totalInterest)}</td>
             </tr>
           </>
         )}
-        {R.oneTimeUberCosts > 0 && (
+        {result.oneTimeUberCosts > 0 && (
           <tr>
             <td>Trámites iniciales Uber (único)</td>
-            <td className="num">{fmtMXN(R.oneTimeUberCosts)}</td>
+            <td className="num">{fmtMXN(result.oneTimeUberCosts)}</td>
           </tr>
         )}
         <tr>
           <td>Seguro mensual</td>
-          <td className="num">{fmtMXN(R.monthlyIns)}</td>
+          <td className="num">{fmtMXN(result.monthlyIns)}</td>
         </tr>
         <tr>
           <td>Refrendo/tenencia mensual</td>
-          <td className="num">{fmtMXN(R.monthlyRefrendo)}</td>
+          <td className="num">{fmtMXN(result.monthlyRefrendo)}</td>
         </tr>
         <tr>
           <td>Lavado + propinas mensual</td>
-          <td className="num">{fmtMXN(R.monthlyCarWash + R.monthlyTips)}</td>
+          <td className="num">{fmtMXN(result.monthlyCarWash + result.monthlyTips)}</td>
         </tr>
         <tr>
           <td>Misceláneos mensual</td>
-          <td className="num">{fmtMXN(R.monthlyMisc)}</td>
+          <td className="num">{fmtMXN(result.monthlyMisc)}</td>
         </tr>
         <tr>
           <td>Egresos operativos mensuales</td>
-          <td className="num">{fmtMXN(R.monthlyTotalOperative)}</td>
+          <td className="num">{fmtMXN(result.monthlyTotalOperative)}</td>
         </tr>
-        {R.isUberMode && (
+        {result.isUberMode && (
           <>
             <tr>
               <td>Ingreso neto antes de km/viaje</td>
-              <td className="num pos">{fmtMXN(R.netPerTrip, 2)}</td>
+              <td className="num pos">{fmtMXN(result.netPerTrip, 2)}</td>
             </tr>
             <tr>
               <td>Contribución después de km/viaje</td>
-              <td className={`num ${R.netContributionPerTrip >= 0 ? 'pos' : 'neg'}`}>
-                {fmtMXN(R.netContributionPerTrip, 2)}
+              <td className={`num ${result.netContributionPerTrip >= 0 ? 'pos' : 'neg'}`}>
+                {fmtMXN(result.netContributionPerTrip, 2)}
               </td>
             </tr>
             <tr>
               <td>Equilibrio operativo</td>
-              <td className="num">{fmtN(R.operatingBreakEvenTrips, 0)} viajes/mes</td>
+              <td className="num">{fmtN(result.operatingBreakEvenTrips, 0)} viajes/mes</td>
             </tr>
             <tr>
               <td>Recuperación mensual del proyecto</td>
-              <td className="num">{fmtMXN(R.projectRecoveryMonthly)}</td>
+              <td className="num">{fmtMXN(result.projectRecoveryMonthly)}</td>
             </tr>
             <tr>
               <td>
                 <strong>Punto de equilibrio del proyecto</strong>
               </td>
               <td className="num">
-                <strong>{fmtN(R.breakEvenTrips, 0)} viajes/mes</strong>
+                <strong>{fmtN(result.breakEvenTrips, 0)} viajes/mes</strong>
               </td>
             </tr>
             <tr>
@@ -160,7 +160,7 @@ export const ReportTables = ({ R, inputs, yearEnd, car, vehicleLabel, breakdown 
                 <strong>Intensidad: días/semana</strong>
               </td>
               <td className="num">
-                <strong>{fmtFixed(R.weeklyDays)} días</strong>
+                <strong>{fmtFixed(result.weeklyDays)} días</strong>
               </td>
             </tr>
             <tr>
@@ -168,7 +168,7 @@ export const ReportTables = ({ R, inputs, yearEnd, car, vehicleLabel, breakdown 
                 <strong>Intensidad: horas/día</strong>
               </td>
               <td className="num">
-                <strong>{fmtFixed(R.hoursPerDay)} hrs</strong>
+                <strong>{fmtFixed(result.hoursPerDay)} hrs</strong>
               </td>
             </tr>
             <tr>
@@ -176,48 +176,48 @@ export const ReportTables = ({ R, inputs, yearEnd, car, vehicleLabel, breakdown 
                 <strong>Intensidad: horas/semana</strong>
               </td>
               <td className="num">
-                <strong>{fmtFixed(R.hoursPerWeek)} hrs</strong>
+                <strong>{fmtFixed(result.hoursPerWeek)} hrs</strong>
               </td>
             </tr>
             <tr>
               <td>Viajes/día</td>
-              <td className="num">{fmtFixed(R.tripsPerDay)}</td>
+              <td className="num">{fmtFixed(result.tripsPerDay)}</td>
             </tr>
           </>
         )}
         <tr>
           <td>Valor depreciado en {yearEnd}</td>
-          <td className="num">{fmtMXN(R.valueAtEnd)}</td>
+          <td className="num">{fmtMXN(result.valueAtEnd)}</td>
         </tr>
         <tr>
           <td>Precio venta esperado (× {inputs.salesFactor.toFixed(2)})</td>
-          <td className="num">{fmtMXN(R.actualSalePrice)}</td>
+          <td className="num">{fmtMXN(result.actualSalePrice)}</td>
         </tr>
         <tr>
           <td>Saldo crédito en {yearEnd}</td>
-          <td className="num">{fmtMXN(R.remainingDebt)}</td>
+          <td className="num">{fmtMXN(result.remainingDebt)}</td>
         </tr>
         <tr>
           <td>
             <strong>Costo neto del proyecto</strong>
           </td>
           <td className="num">
-            <strong>{fmtMXN(R.totalProjectCost)}</strong>
+            <strong>{fmtMXN(result.totalProjectCost)}</strong>
           </td>
         </tr>
         <tr>
           <td>Resultado de liquidación (venta − deuda)</td>
-          <td className={`num ${R.liquidationPosition >= 0 ? 'pos' : 'neg'}`}>
-            {fmtMXN(R.liquidationPosition)}
+          <td className={`num ${result.liquidationPosition >= 0 ? 'pos' : 'neg'}`}>
+            {fmtMXN(result.liquidationPosition)}
           </td>
         </tr>
-        {R.isUberMode && (
+        {result.isUberMode && (
           <tr>
             <td>
               <strong>Resultado neto del proyecto</strong>
             </td>
-            <td className={`num ${R.netProjectResult >= 0 ? 'pos' : 'neg'}`}>
-              <strong>{fmtMXN(R.netProjectResult)}</strong>
+            <td className={`num ${result.netProjectResult >= 0 ? 'pos' : 'neg'}`}>
+              <strong>{fmtMXN(result.netProjectResult)}</strong>
             </td>
           </tr>
         )}

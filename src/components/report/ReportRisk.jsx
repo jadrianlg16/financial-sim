@@ -2,7 +2,7 @@ import { fmtFixed, fmtMXN, fmtN, fmtPct } from '../../domain/format.js';
 
 // Rango probable: el caso base rodeado de una simulación Monte Carlo ligera
 // (optimista P10, probable P50, pesimista P90).
-export const ReportRisk = ({ R, mc, mcRuns }) => (
+export const ReportRisk = ({ result, mc, mcRuns }) => (
   <>
     {mc && (
       <>
@@ -13,7 +13,7 @@ export const ReportRisk = ({ R, mc, mcRuns }) => (
           seguro, depreciación…) {fmtN(mcRuns, 0)} veces para ver el <strong>rango</strong> en que
           caen los resultados: optimista (P10), probable (P50) y pesimista (P90).
         </p>
-        {R.isUberMode ? (
+        {result.isUberMode ? (
           <>
             <div className="kpi-grid" style={{ marginBottom: 14 }}>
               <div className="kpi accent">
@@ -77,12 +77,12 @@ export const ReportRisk = ({ R, mc, mcRuns }) => (
               </tbody>
             </table>
             <p style={{ fontSize: 13, marginTop: 10 }}>
-              {R.feasible ? (
+              {result.feasible ? (
                 <>
-                  Aunque el caso base es viable trabajando ~{fmtFixed(R.hoursPerWeek)} hrs/semana,
-                  en el <strong>10% peor</strong> de los escenarios necesitarías acercarte a{' '}
-                  <strong>{fmtN(mc.be.p90, 0)} viajes/mes</strong> y el resultado neto podría caer a{' '}
-                  <strong>{fmtMXN(mc.net.p10)}</strong>. El plan funciona en ~
+                  Aunque el caso base es viable trabajando ~{fmtFixed(result.hoursPerWeek)}{' '}
+                  hrs/semana, en el <strong>10% peor</strong> de los escenarios necesitarías
+                  acercarte a <strong>{fmtN(mc.be.p90, 0)} viajes/mes</strong> y el resultado neto
+                  podría caer a <strong>{fmtMXN(mc.net.p10)}</strong>. El plan funciona en ~
                   <strong>{fmtPct(mc.feasibleRate, 0)}</strong> de los casos simulados.
                 </>
               ) : (

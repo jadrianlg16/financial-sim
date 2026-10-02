@@ -12,9 +12,9 @@ import { projectionYear } from '../domain/year.js';
 // financiar vs. contado, $/km, seguro como % del valor, y carga y autonomía del
 // EV. Cada fórmula explica sus términos en lenguaje simple.
 // ============================================================================
-export const Formulas = ({ R, inputs }) => {
+export const Formulas = ({ result, inputs }) => {
   const i = inputs.interestRate / 12;
-  const n = R.months;
+  const n = result.months;
   const dm = inputs.depreciationMethod || 'declining';
   const depName =
     dm === 'straight'
@@ -51,28 +51,36 @@ export const Formulas = ({ R, inputs }) => {
         </div>
         <div className="formula-where">
           <em>P</em> = lo que financias, <em>i</em> = tasa mensual = anual ÷ 12, <em>n</em> = meses.{' '}
-          {R.isLease
+          {result.isLease
             ? 'En arrendamiento NO se financia el auto: la "mensualidad" es la renta fija que capturas.'
-            : R.isBalloon
+            : result.isBalloon
               ? 'En crédito con pago final (globo), la mensualidad usa la fórmula 1-bis (residual).'
               : ''}
         </div>
         <div className="formula-substituted">
-          A = {fmtMXN(R.financed)} × [{i.toFixed(5)} × (1+{i.toFixed(5)})^{n}] / [(1+{i.toFixed(5)}
+          A = {fmtMXN(result.financed)} × [{i.toFixed(5)} × (1+{i.toFixed(5)})^{n}] / [(1+
+          {i.toFixed(5)}
           )^{n} − 1] ={' '}
           <strong>
-            {fmtMXN(R.isLease ? (R.financed > 0 ? 0 : R.monthlyPayment) : R.monthlyPayment)}/mes
+            {fmtMXN(
+              result.isLease
+                ? result.financed > 0
+                  ? 0
+                  : result.monthlyPayment
+                : result.monthlyPayment,
+            )}
+            /mes
           </strong>
-          {R.isLease && (
+          {result.isLease && (
             <>
               {' '}
-              · renta arrendamiento = <strong>{fmtMXN(R.leaseMonthly)}/mes</strong>
+              · renta arrendamiento = <strong>{fmtMXN(result.leaseMonthly)}/mes</strong>
             </>
           )}
         </div>
       </div>
 
-      {R.isBalloon && R.financed > 0 && (
+      {result.isBalloon && result.financed > 0 && (
         <div className="formula-block" style={{ borderColor: 'var(--accent)' }}>
           <div className="formula-name">1-bis · Crédito con pago final (globo / residual)</div>
           <div className="formula-eq">
@@ -88,19 +96,20 @@ export const Formulas = ({ R, inputs }) => {
             <span className="op">;</span> Globo <span className="op">=</span> B
           </div>
           <div className="formula-where">
-            <em>B</em> = valor residual ({fmtPct(R.balloonPct, 0)} del financiado) que NO se
+            <em>B</em> = valor residual ({fmtPct(result.balloonPct, 0)} del financiado) que NO se
             amortiza en las mensualidades y se paga (o refinancia) al final del plazo. Por eso la
             mensualidad es menor que en un crédito tradicional, pero queda un pago grande al cierre.
           </div>
           <div className="formula-substituted">
-            B = {fmtPct(R.balloonPct, 0)} × {fmtMXN(R.financed)} = {fmtMXN(R.balloonAmount)} · A ={' '}
-            <strong>{fmtMXN(R.monthlyPayment)}/mes</strong> · pago final del globo en el mes{' '}
-            {R.months} = <strong>{fmtMXN(R.balloonAmount)}</strong>
+            B = {fmtPct(result.balloonPct, 0)} × {fmtMXN(result.financed)} ={' '}
+            {fmtMXN(result.balloonAmount)} · A ={' '}
+            <strong>{fmtMXN(result.monthlyPayment)}/mes</strong> · pago final del globo en el mes{' '}
+            {result.months} = <strong>{fmtMXN(result.balloonAmount)}</strong>
           </div>
         </div>
       )}
 
-      {R.isLease && (
+      {result.isLease && (
         <div className="formula-block" style={{ borderColor: 'var(--accent)' }}>
           <div className="formula-name">1-ter · Arrendamiento (sin propiedad)</div>
           <div className="formula-eq">
@@ -115,13 +124,13 @@ export const Formulas = ({ R, inputs }) => {
             penalización por km excedente.
           </div>
           <div className="formula-substituted">
-            Inicial {fmtMXN(R.cashPaid)} + renta {fmtMXN(R.leaseMonthly)}/mes ×{' '}
-            {Math.min(R.months, inputs.horizonYears * 12)} meses
-            {R.leaseKmPenaltyYear > 0 && (
-              <> + penalización km {fmtMXN(R.leaseKmPenaltyYear)}/año</>
+            Inicial {fmtMXN(result.cashPaid)} + renta {fmtMXN(result.leaseMonthly)}/mes ×{' '}
+            {Math.min(result.months, inputs.horizonYears * 12)} meses
+            {result.leaseKmPenaltyYear > 0 && (
+              <> + penalización km {fmtMXN(result.leaseKmPenaltyYear)}/año</>
             )}{' '}
-            · recuperación terminal = <strong>{fmtMXN(R.terminalRecovery)}</strong> · TCO ={' '}
-            <strong>{fmtMXN(R.tcoTotal)}</strong>
+            · recuperación terminal = <strong>{fmtMXN(result.terminalRecovery)}</strong> · TCO ={' '}
+            <strong>{fmtMXN(result.tcoTotal)}</strong>
           </div>
         </div>
       )}
@@ -140,8 +149,8 @@ export const Formulas = ({ R, inputs }) => {
         </div>
         <div className="formula-where">Trae cada mensualidad futura a valor de hoy.</div>
         <div className="formula-substituted">
-          VP = {fmtMXN(R.monthlyPayment)} × [1−(1+{i.toFixed(5)})^−{n}]/{i.toFixed(5)} +{' '}
-          {fmtMXN(R.cashPaid)} = <strong>{fmtMXN(R.pvTotal)}</strong>
+          VP = {fmtMXN(result.monthlyPayment)} × [1−(1+{i.toFixed(5)})^−{n}]/{i.toFixed(5)} +{' '}
+          {fmtMXN(result.cashPaid)} = <strong>{fmtMXN(result.pvTotal)}</strong>
         </div>
       </div>
 
@@ -152,8 +161,8 @@ export const Formulas = ({ R, inputs }) => {
           <span className="op">+</span> Enganche <span className="op">+</span> Comisiones
         </div>
         <div className="formula-substituted">
-          VF = {fmtMXN(R.monthlyPayment)} × {n} + {fmtMXN(R.cashPaid)} + {fmtMXN(R.openingFee)} ={' '}
-          <strong>{fmtMXN(R.fvTotal)}</strong>
+          VF = {fmtMXN(result.monthlyPayment)} × {n} + {fmtMXN(result.cashPaid)} +{' '}
+          {fmtMXN(result.openingFee)} = <strong>{fmtMXN(result.fvTotal)}</strong>
         </div>
       </div>
 
@@ -164,8 +173,8 @@ export const Formulas = ({ R, inputs }) => {
         </div>
         <div className="formula-where">Lo que cuesta pagar a plazos en vez de de contado.</div>
         <div className="formula-substituted">
-          Δ = {fmtMXN(R.fvTotal)} − {fmtMXN(R.pvTotal)} ={' '}
-          <strong>{fmtMXN(R.timeValueOfMoney)}</strong>
+          Δ = {fmtMXN(result.fvTotal)} − {fmtMXN(result.pvTotal)} ={' '}
+          <strong>{fmtMXN(result.timeValueOfMoney)}</strong>
         </div>
       </div>
 
@@ -212,10 +221,10 @@ export const Formulas = ({ R, inputs }) => {
         </div>
         <div className="formula-substituted">
           d = {fmtPct(effDepRate, 0)}/año{isUsedCar && ' (usado)'} · V
-          <sub>{inputs.horizonYears}</sub> = {fmtMXN(R.valueAtEnd)} (
-          {fmtPct(R.valueAtEnd / Math.max(1, inputs.carPrice), 0)} del precio) · venta neta esperada{' '}
-          {fmtMXN(R.actualSalePrice)} ·{' '}
-          <strong>costo por depreciación {fmtMXN(R.depreciationCost)}</strong>
+          <sub>{inputs.horizonYears}</sub> = {fmtMXN(result.valueAtEnd)} (
+          {fmtPct(result.valueAtEnd / Math.max(1, inputs.carPrice), 0)} del precio) · venta neta
+          esperada {fmtMXN(result.actualSalePrice)} ·{' '}
+          <strong>costo por depreciación {fmtMXN(result.depreciationCost)}</strong>
         </div>
       </div>
 
@@ -232,25 +241,25 @@ export const Formulas = ({ R, inputs }) => {
             c<sub>uber</sub>
           </em>{' '}
           = comisión. El <strong>impuesto depende del régimen fiscal</strong> elegido:
-          {R.taxRegime === 'gross' && (
+          {result.taxRegime === 'gross' && (
             <>
               {' '}
-              régimen <strong>Bruto (simple)</strong>: impuesto = {fmtPct(R.taxRate, 0)} × tarifa
-              bruta. Es un supuesto simplificado que sobreestima el impuesto real.
+              régimen <strong>Bruto (simple)</strong>: impuesto = {fmtPct(result.taxRate, 0)} ×
+              tarifa bruta. Es un supuesto simplificado que sobreestima el impuesto real.
             </>
           )}
-          {R.taxRegime === 'net' && (
+          {result.taxRegime === 'net' && (
             <>
               {' '}
-              régimen <strong>Utilidad</strong>: impuesto = {fmtPct(R.taxRate, 0)} × utilidad del
-              viaje (tarifa − comisión − costo variable), nunca negativo.
+              régimen <strong>Utilidad</strong>: impuesto = {fmtPct(result.taxRate, 0)} × utilidad
+              del viaje (tarifa − comisión − costo variable), nunca negativo.
             </>
           )}
-          {R.taxRegime !== 'gross' && R.taxRegime !== 'net' && (
+          {result.taxRegime !== 'gross' && result.taxRegime !== 'net' && (
             <>
               {' '}
               régimen <strong>RESICO (realista)</strong>: retención de plataforma ={' '}
-              {fmtPct(R.resicoRate, 1)} × tarifa bruta. Es lo que aplica hoy a la mayoría de
+              {fmtPct(result.resicoRate, 1)} × tarifa bruta. Es lo que aplica hoy a la mayoría de
               conductores en México.
             </>
           )}{' '}
@@ -258,11 +267,16 @@ export const Formulas = ({ R, inputs }) => {
           desgaste Uber.
         </div>
         <div className="formula-substituted">
-          Ingreso = {fmtMXN(R.grossPerTrip)} − {fmtMXN(R.platformCommission, 2)} − impuesto{' '}
-          {fmtMXN(R.taxAmountPerTrip, 2)} (
-          {R.taxRegime === 'gross' ? 'bruto' : R.taxRegime === 'net' ? 'utilidad' : 'RESICO'}) ={' '}
-          {fmtMXN(R.netRevenuePerTrip, 2)} · Costo var = {fmtMXN(R.variableCostPerTrip, 2)} ·{' '}
-          <strong>Contribución = {fmtMXN(R.netContributionPerTrip, 2)}/viaje</strong>
+          Ingreso = {fmtMXN(result.grossPerTrip)} − {fmtMXN(result.platformCommission, 2)} −
+          impuesto {fmtMXN(result.taxAmountPerTrip, 2)} (
+          {result.taxRegime === 'gross'
+            ? 'bruto'
+            : result.taxRegime === 'net'
+              ? 'utilidad'
+              : 'RESICO'}
+          ) = {fmtMXN(result.netRevenuePerTrip, 2)} · Costo var ={' '}
+          {fmtMXN(result.variableCostPerTrip, 2)} ·{' '}
+          <strong>Contribución = {fmtMXN(result.netContributionPerTrip, 2)}/viaje</strong>
         </div>
       </div>
 
@@ -284,9 +298,9 @@ export const Formulas = ({ R, inputs }) => {
           proyecto es la parte del desembolso inicial que no queda cubierta por venta final − deuda.
         </div>
         <div className="formula-substituted">
-          E = ({fmtMXN(R.operatingFixedMonthlyCosts)} + {fmtMXN(R.projectRecoveryMonthly)} +{' '}
-          {fmtMXN(R.profitTarget)}) ÷ {fmtMXN(R.netContributionPerTrip, 2)} ={' '}
-          <strong>{fmtN(R.breakEvenTrips, 0)} viajes/mes</strong>
+          E = ({fmtMXN(result.operatingFixedMonthlyCosts)} + {fmtMXN(result.projectRecoveryMonthly)}{' '}
+          + {fmtMXN(result.profitTarget)}) ÷ {fmtMXN(result.netContributionPerTrip, 2)} ={' '}
+          <strong>{fmtN(result.breakEvenTrips, 0)} viajes/mes</strong>
         </div>
       </div>
 
@@ -305,9 +319,9 @@ export const Formulas = ({ R, inputs }) => {
           <em>d</em> = días/mes, <em>v</em> = viajes/hora (máx 4).
         </div>
         <div className="formula-substituted">
-          h<sub>día</sub> = ({fmtN(R.breakEvenTrips, 0)}/{inputs.workDaysPerMonth})/
-          {inputs.tripsPerHour} = <strong>{fmtFixed(R.hoursPerDay)} hrs/día</strong> · h
-          <sub>semana</sub> = <strong>{fmtFixed(R.hoursPerWeek)} hrs/sem</strong>
+          h<sub>día</sub> = ({fmtN(result.breakEvenTrips, 0)}/{inputs.workDaysPerMonth})/
+          {inputs.tripsPerHour} = <strong>{fmtFixed(result.hoursPerDay)} hrs/día</strong> · h
+          <sub>semana</sub> = <strong>{fmtFixed(result.hoursPerWeek)} hrs/sem</strong>
         </div>
       </div>
 
@@ -352,12 +366,12 @@ export const Formulas = ({ R, inputs }) => {
           neto descuenta esa recuperación real; el resultado neto suma además los ingresos de Uber.
         </div>
         <div className="formula-substituted">
-          Recuperas = venta − deuda = {fmtMXN(R.actualSalePrice)} − {fmtMXN(R.remainingDebt)} ={' '}
-          {fmtMXN(R.terminalRecovery)} · Costo neto = {fmtMXN(R.totalSpentGross)} −{' '}
-          {fmtMXN(R.terminalRecovery)} = <strong>{fmtMXN(R.totalProjectCost)}</strong> · Resultado
-          neto ={' '}
-          <strong style={{ color: R.netProjectResult >= 0 ? 'var(--pos)' : 'var(--neg)' }}>
-            {fmtMXN(R.netProjectResult)}
+          Recuperas = venta − deuda = {fmtMXN(result.actualSalePrice)} −{' '}
+          {fmtMXN(result.remainingDebt)} = {fmtMXN(result.terminalRecovery)} · Costo neto ={' '}
+          {fmtMXN(result.totalSpentGross)} − {fmtMXN(result.terminalRecovery)} ={' '}
+          <strong>{fmtMXN(result.totalProjectCost)}</strong> · Resultado neto ={' '}
+          <strong style={{ color: result.netProjectResult >= 0 ? 'var(--pos)' : 'var(--neg)' }}>
+            {fmtMXN(result.netProjectResult)}
           </strong>
         </div>
       </div>
@@ -384,15 +398,15 @@ export const Formulas = ({ R, inputs }) => {
           invertir tu dinero a la tasa <em>k</em>.
         </div>
         <div className="formula-substituted">
-          k = {fmtPct(R.discountAnnual, 1)} · VPN del proyecto ={' '}
-          <strong style={{ color: R.npvProject >= 0 ? 'var(--pos)' : 'var(--neg)' }}>
-            {fmtMXN(R.npvProject)}
+          k = {fmtPct(result.discountAnnual, 1)} · VPN del proyecto ={' '}
+          <strong style={{ color: result.npvProject >= 0 ? 'var(--pos)' : 'var(--neg)' }}>
+            {fmtMXN(result.npvProject)}
           </strong>{' '}
-          · valor presente del costo de propiedad = <strong>{fmtMXN(R.pvLifetimeCost)}</strong>
+          · valor presente del costo de propiedad = <strong>{fmtMXN(result.pvLifetimeCost)}</strong>
         </div>
       </div>
 
-      {isFinite(R.irrProject) && R.isUberMode && (
+      {isFinite(result.irrProject) && result.isUberMode && (
         <div className="formula-block">
           <div className="formula-name">12 · Tasa Interna de Retorno (TIR / IRR)</div>
           <div className="formula-eq">
@@ -411,9 +425,11 @@ export const Formulas = ({ R, inputs }) => {
             tasa de descuento.
           </div>
           <div className="formula-substituted">
-            TIR = <strong>{fmtPct(R.irrProject, 1)}</strong> vs descuento{' '}
-            {fmtPct(R.discountAnnual, 1)} →{' '}
-            {R.irrProject >= R.discountAnnual ? 'crea valor' : 'no supera tu costo de oportunidad'}
+            TIR = <strong>{fmtPct(result.irrProject, 1)}</strong> vs descuento{' '}
+            {fmtPct(result.discountAnnual, 1)} →{' '}
+            {result.irrProject >= result.discountAnnual
+              ? 'crea valor'
+              : 'no supera tu costo de oportunidad'}
           </div>
         </div>
       )}
@@ -435,12 +451,12 @@ export const Formulas = ({ R, inputs }) => {
           valor.
         </div>
         <div className="formula-substituted">
-          CAE = {fmtMXN(R.pvLifetimeCost)} ÷ factor(k={fmtPct(R.discountAnnual, 1)}, N=
-          {inputs.horizonYears}) = <strong>{fmtMXN(R.eac)}/año</strong>
+          CAE = {fmtMXN(result.pvLifetimeCost)} ÷ factor(k={fmtPct(result.discountAnnual, 1)}, N=
+          {inputs.horizonYears}) = <strong>{fmtMXN(result.eac)}/año</strong>
         </div>
       </div>
 
-      {R.financed > 0 && (
+      {result.financed > 0 && (
         <div className="formula-block">
           <div className="formula-name">14 · CAT y tasa efectiva anual</div>
           <div className="formula-eq">
@@ -459,13 +475,13 @@ export const Formulas = ({ R, inputs }) => {
             lista.
           </div>
           <div className="formula-substituted">
-            Interés lista {fmtPct(inputs.interestRate, 1)} · efectiva {fmtPct(R.ear, 1)} ·{' '}
-            <strong>CAT {fmtPct(R.cat, 1)}</strong>
+            Interés lista {fmtPct(inputs.interestRate, 1)} · efectiva {fmtPct(result.ear, 1)} ·{' '}
+            <strong>CAT {fmtPct(result.cat, 1)}</strong>
           </div>
         </div>
       )}
 
-      {R.financed > 0 && (
+      {result.financed > 0 && (
         <div className="formula-block">
           <div className="formula-name">15 · ¿Financiar o pagar de contado?</div>
           <div className="formula-eq">
@@ -478,16 +494,16 @@ export const Formulas = ({ R, inputs }) => {
             crédito).
           </div>
           <div className="formula-substituted">
-            Δ = {fmtMXN(R.pvCashPath)} − {fmtMXN(R.pvFinancedPath)} ={' '}
-            <strong style={{ color: R.financeVsCashPV >= 0 ? 'var(--pos)' : 'var(--neg)' }}>
-              {fmtMXN(R.financeVsCashPV)}
+            Δ = {fmtMXN(result.pvCashPath)} − {fmtMXN(result.pvFinancedPath)} ={' '}
+            <strong style={{ color: result.financeVsCashPV >= 0 ? 'var(--pos)' : 'var(--neg)' }}>
+              {fmtMXN(result.financeVsCashPV)}
             </strong>{' '}
-            → {R.financeVsCashPV >= 0 ? 'financiar' : 'contado'} conviene
+            → {result.financeVsCashPV >= 0 ? 'financiar' : 'contado'} conviene
           </div>
         </div>
       )}
 
-      {isFinite(R.costPerKm) && (
+      {isFinite(result.costPerKm) && (
         <div className="formula-block">
           <div className="formula-name">16 · Costo total de propiedad por km</div>
           <div className="formula-eq">
@@ -503,13 +519,13 @@ export const Formulas = ({ R, inputs }) => {
             TCO = costo neto de propiedad; km totales = (km Uber + km personales) × horizonte.
           </div>
           <div className="formula-substituted">
-            $/km = {fmtMXN(R.tcoTotal)} ÷ {fmtN(R.totalKmHorizon)} km ={' '}
-            <strong>{fmtMXN(R.costPerKm, 2)}/km</strong>
+            $/km = {fmtMXN(result.tcoTotal)} ÷ {fmtN(result.totalKmHorizon)} km ={' '}
+            <strong>{fmtMXN(result.costPerKm, 2)}/km</strong>
           </div>
         </div>
       )}
 
-      {R.insuranceMode === 'pctOfValue' && (
+      {result.insuranceMode === 'pctOfValue' && (
         <div className="formula-block">
           <div className="formula-name">16-bis · Seguro como % del valor</div>
           <div className="formula-eq">
@@ -520,19 +536,19 @@ export const Formulas = ({ R, inputs }) => {
             <em>
               p<sub>seg</sub>
             </em>{' '}
-            = {fmtPct(R.insurancePctOfValue, 1)}/año del valor asegurado. Como el auto se deprecia,
-            la prima BAJA cada año (realista para cobertura amplia). El KPI de seguro muestra el
-            valor del año 1.
+            = {fmtPct(result.insurancePctOfValue, 1)}/año del valor asegurado. Como el auto se
+            deprecia, la prima BAJA cada año (realista para cobertura amplia). El KPI de seguro
+            muestra el valor del año 1.
           </div>
           <div className="formula-substituted">
-            Prima año 1 = {fmtPct(R.insurancePctOfValue, 1)} × {fmtMXN(inputs.carPrice)} ={' '}
-            {fmtMXN(R.insurancePctOfValue * inputs.carPrice)}/año ={' '}
-            <strong>{fmtMXN(R.monthlyIns)}/mes</strong> (declina con la depreciación)
+            Prima año 1 = {fmtPct(result.insurancePctOfValue, 1)} × {fmtMXN(inputs.carPrice)} ={' '}
+            {fmtMXN(result.insurancePctOfValue * inputs.carPrice)}/año ={' '}
+            <strong>{fmtMXN(result.monthlyIns)}/mes</strong> (declina con la depreciación)
           </div>
         </div>
       )}
 
-      {R.chargingHoursPerDay > 0 && (
+      {result.chargingHoursPerDay > 0 && (
         <div className="formula-block">
           <div className="formula-name">17 · Tiempo de carga eléctrica diario</div>
           <div className="formula-eq">
@@ -557,12 +573,13 @@ export const Formulas = ({ R, inputs }) => {
             = potencia del cargador.
           </div>
           <div className="formula-substituted">
-            t<sub>carga</sub> = ({fmtN(R.totalDailyKm, 1)} / {inputs.kmPerKwh}) /{' '}
-            {inputs.chargerPowerKw} = <strong>{fmtFixed(R.chargingHoursPerDay)} hrs/día</strong>
+            t<sub>carga</sub> = ({fmtN(result.totalDailyKm, 1)} / {inputs.kmPerKwh}) /{' '}
+            {inputs.chargerPowerKw} ={' '}
+            <strong>{fmtFixed(result.chargingHoursPerDay)} hrs/día</strong>
           </div>
         </div>
       )}
-      {R.isEV && (
+      {result.isEV && (
         <div className="formula-block">
           <div className="formula-name">18 · Autonomía eléctrica</div>
           <div className="formula-eq">
@@ -573,9 +590,9 @@ export const Formulas = ({ R, inputs }) => {
             Si los km diarios superan una carga útil, el plan no se marca viable.
           </div>
           <div className="formula-substituted">
-            Rango = {fmtN(R.usableKwh, 1)} kWh × {inputs.kmPerKwh} ={' '}
-            <strong>{fmtN(R.dailyRangeKm, 0)} km/día</strong>; uso ={' '}
-            <strong>{fmtN(R.totalDailyKm, 0)} km/día</strong>
+            Rango = {fmtN(result.usableKwh, 1)} kWh × {inputs.kmPerKwh} ={' '}
+            <strong>{fmtN(result.dailyRangeKm, 0)} km/día</strong>; uso ={' '}
+            <strong>{fmtN(result.totalDailyKm, 0)} km/día</strong>
           </div>
         </div>
       )}

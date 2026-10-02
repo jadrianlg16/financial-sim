@@ -191,9 +191,9 @@ export const Comparison = ({ saved, currentInputs, setSaved }) => {
         }}
       >
         {computed.map((c) => {
-          const I = c.inputs;
-          const R2 = c.result;
-          const isUber = I.operationMode !== 'no-uber';
+          const carInputs = c.inputs;
+          const carResult = c.result;
+          const isUber = carInputs.operationMode !== 'no-uber';
           return (
             <div
               key={c.id}
@@ -243,19 +243,19 @@ export const Comparison = ({ saved, currentInputs, setSaved }) => {
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
                   <span style={{ color: 'var(--muted)' }}>CAE/año</span>
-                  <strong className="mono">{fmtMXN(R2.eac)}</strong>
+                  <strong className="mono">{fmtMXN(carResult.eac)}</strong>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
                   <span style={{ color: 'var(--muted)' }}>$/km</span>
                   <strong className="mono">
-                    {isFinite(R2.costPerKm) ? fmtMXN(R2.costPerKm, 2) : '—'}
+                    {isFinite(carResult.costPerKm) ? fmtMXN(carResult.costPerKm, 2) : '—'}
                   </strong>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
                   <span style={{ color: 'var(--muted)' }}>
-                    {R2.isLease ? 'Renta/mes' : 'Mensual'}
+                    {carResult.isLease ? 'Renta/mes' : 'Mensual'}
                   </span>
-                  <strong className="mono">{fmtMXN(R2.monthlyTotalOperative)}</strong>
+                  <strong className="mono">{fmtMXN(carResult.monthlyTotalOperative)}</strong>
                 </div>
               </div>
               <div className="field">
@@ -265,7 +265,7 @@ export const Comparison = ({ saved, currentInputs, setSaved }) => {
                 <select
                   className="select"
                   style={{ fontSize: 11 }}
-                  value={I.carPreset}
+                  value={carInputs.carPreset}
                   onChange={(e) => applyPreset(c.id, e.target.value)}
                 >
                   {Object.entries(CAR_PRESETS).map(([k, p]) => (
@@ -277,7 +277,7 @@ export const Comparison = ({ saved, currentInputs, setSaved }) => {
               </div>
               <Field
                 label="Precio"
-                value={I.carPrice}
+                value={carInputs.carPrice}
                 min={50000}
                 max={1500000}
                 step={1000}
@@ -289,7 +289,7 @@ export const Comparison = ({ saved, currentInputs, setSaved }) => {
                   Condición
                 </div>
                 <Segmented
-                  value={I.vehicleCondition || 'new'}
+                  value={carInputs.vehicleCondition || 'new'}
                   onChange={(v) => setCarField(c.id, 'vehicleCondition', v)}
                   options={[
                     { value: 'new', label: 'Nuevo' },
@@ -302,7 +302,7 @@ export const Comparison = ({ saved, currentInputs, setSaved }) => {
                   Motor
                 </div>
                 <Segmented
-                  value={I.vehicleType}
+                  value={carInputs.vehicleType}
                   onChange={(v) => setCarField(c.id, 'vehicleType', v)}
                   options={[
                     { value: 'gasoline', label: 'Gas' },
@@ -317,7 +317,7 @@ export const Comparison = ({ saved, currentInputs, setSaved }) => {
                   <Wallet size={10} /> Pago
                 </div>
                 <Segmented
-                  value={I.purchaseMode}
+                  value={carInputs.purchaseMode}
                   onChange={(v) => setCarField(c.id, 'purchaseMode', v)}
                   options={[
                     { value: 'cash', label: 'Contado' },
@@ -326,13 +326,13 @@ export const Comparison = ({ saved, currentInputs, setSaved }) => {
                   ]}
                 />
               </div>
-              {I.purchaseMode === 'credit' && (
+              {carInputs.purchaseMode === 'credit' && (
                 <div className="field">
                   <div className="field-label" style={{ marginBottom: 4, fontSize: 11 }}>
                     Financiamiento
                   </div>
                   <Segmented
-                    value={I.financeType || 'annuity'}
+                    value={carInputs.financeType || 'annuity'}
                     onChange={(v) => setCarField(c.id, 'financeType', v)}
                     options={[
                       { value: 'annuity', label: 'Trad.' },
@@ -342,22 +342,22 @@ export const Comparison = ({ saved, currentInputs, setSaved }) => {
                   />
                 </div>
               )}
-              {I.purchaseMode !== 'cash' &&
-                !(I.purchaseMode === 'credit' && I.financeType === 'lease') && (
+              {carInputs.purchaseMode !== 'cash' &&
+                !(carInputs.purchaseMode === 'credit' && carInputs.financeType === 'lease') && (
                   <>
                     <Field
                       label="Tasa anual"
-                      value={I.interestRate}
+                      value={carInputs.interestRate}
                       min={0.03}
                       max={0.4}
                       step={0.001}
                       decimals={3}
                       onChange={(v) => setCarField(c.id, 'interestRate', v)}
-                      suffix={`${fmtPct(I.interestRate, 1)} anual`}
+                      suffix={`${fmtPct(carInputs.interestRate, 1)} anual`}
                     />
                     <Field
                       label="Plazo crédito"
-                      value={I.loanMonths}
+                      value={carInputs.loanMonths}
                       min={6}
                       max={84}
                       step={6}
@@ -367,19 +367,19 @@ export const Comparison = ({ saved, currentInputs, setSaved }) => {
                     />
                     <Field
                       label="Enganche"
-                      value={I.downPaymentPct}
+                      value={carInputs.downPaymentPct}
                       min={0.05}
                       max={0.6}
                       step={0.01}
                       decimals={2}
                       onChange={(v) => setCarField(c.id, 'downPaymentPct', v)}
-                      suffix={`${fmtPct(I.downPaymentPct, 0)} del precio`}
+                      suffix={`${fmtPct(carInputs.downPaymentPct, 0)} del precio`}
                     />
                   </>
                 )}
               <Field
                 label="Horizonte"
-                value={I.horizonYears}
+                value={carInputs.horizonYears}
                 min={1}
                 max={10}
                 step={1}
@@ -390,7 +390,7 @@ export const Comparison = ({ saved, currentInputs, setSaved }) => {
               {isUber && (
                 <Field
                   label="Tarifa Uber/viaje"
-                  value={I.avgFare}
+                  value={carInputs.avgFare}
                   min={50}
                   max={500}
                   step={5}

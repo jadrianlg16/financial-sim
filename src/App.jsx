@@ -64,7 +64,7 @@ const TabLoading = () => (
 // Pestañas: Dashboard · Comparar · Sensibilidad · Monte Carlo · Fórmulas ·
 // Importar/AI · Reporte · Glosario. Guarda el estado global: inputs, escenarios
 // guardados y fuentes importadas. `inputs` es la única fuente de verdad: cambiar
-// cualquier variable en el panel lateral recalcula R (useMemo) y todas las
+// cualquier variable en el panel lateral recalcula result (useMemo) y todas las
 // pestañas lo leen. El estado se guarda en localStorage para sobrevivir a una
 // recarga.
 // ============================================================================
@@ -78,7 +78,7 @@ export default function App() {
   const [tab, setTab] = useState('dashboard');
   const [sources, setSources] = useState(persisted?.sources ?? null);
   const colorIdx = useRef(persisted?.saved.length ?? 0);
-  const R = useMemo(() => calculate(inputs), [inputs]);
+  const result = useMemo(() => calculate(inputs), [inputs]);
   useEffect(() => {
     try {
       const slimSaved = saved.map(({ name, inputs, color }) => ({ name, inputs, color }));
@@ -96,7 +96,7 @@ export default function App() {
     const name = `${carName} · ${cityName} · ${motorTag}${purchaseTag}`;
     const color = SCENARIO_COLORS[colorIdx.current % SCENARIO_COLORS.length];
     colorIdx.current++;
-    setSaved([...saved, { name, inputs: { ...inputs }, result: R, color }]);
+    setSaved([...saved, { name, inputs: { ...inputs }, result: result, color }]);
   };
   const handleReset = () => {
     setInputs(DEFAULT_INPUTS);
@@ -179,13 +179,13 @@ export default function App() {
             )}
           >
             <Suspense fallback={<TabLoading />}>
-              {tab === 'dashboard' && <Dashboard R={R} inputs={inputs} />}
+              {tab === 'dashboard' && <Dashboard result={result} inputs={inputs} />}
               {tab === 'compare' && (
                 <Comparison saved={saved} currentInputs={inputs} setSaved={setSaved} />
               )}
               {tab === 'sens' && <Sensitivity inputs={inputs} />}
               {tab === 'mc' && <MonteCarlo inputs={inputs} />}
-              {tab === 'formulas' && <Formulas R={R} inputs={inputs} />}
+              {tab === 'formulas' && <Formulas result={result} inputs={inputs} />}
               {tab === 'import' && (
                 <ImportCase
                   inputs={inputs}
@@ -194,7 +194,7 @@ export default function App() {
                   setSources={setSources}
                 />
               )}
-              {tab === 'report' && <Report R={R} inputs={inputs} sources={sources} />}
+              {tab === 'report' && <Report result={result} inputs={inputs} sources={sources} />}
               {tab === 'glossary' && <Glossary />}
             </Suspense>
           </ErrorBoundary>

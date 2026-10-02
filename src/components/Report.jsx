@@ -31,7 +31,7 @@ const REPORT_MC_RUNS = 800;
 // usuario y una versión en prosa. Se imprime o guarda como PDF con el diálogo del
 // navegador y se descarga como Markdown.
 // ============================================================================
-export const Report = ({ R, inputs, sources }) => {
+export const Report = ({ result, inputs, sources }) => {
   const car = carDisplayName(inputs);
   const city = inputs.cityName || CITY_PRESETS[inputs.city]?.name || 'la ciudad';
   const yearStart = currentYear();
@@ -40,14 +40,14 @@ export const Report = ({ R, inputs, sources }) => {
   const carAge = Math.max(0, yearStart - inputs.carYear);
   const isUsed = inputs.vehicleCondition === 'used';
   const incomePct =
-    inputs.monthlyIncome > 0 ? R.monthlyTotalOperative / inputs.monthlyIncome : null;
+    inputs.monthlyIncome > 0 ? result.monthlyTotalOperative / inputs.monthlyIncome : null;
   const energyName =
     inputs.vehicleType === 'electric'
       ? 'Energía eléctrica'
       : inputs.vehicleType === 'diesel'
         ? 'Diésel'
         : 'Combustible';
-  const labels = reportLabels(R);
+  const labels = reportLabels(result);
 
   // Se recalcula sólo cuando cambian los inputs.
   const mc = useMemo(() => {
@@ -67,15 +67,15 @@ export const Report = ({ R, inputs, sources }) => {
     }
   };
 
-  const rec = buildRecommendation(R, inputs, incomePct);
+  const rec = buildRecommendation(result, inputs, incomePct);
   const recColor =
     rec.level === 'ok' ? 'var(--pos)' : rec.level === 'warn' ? 'var(--warn)' : 'var(--neg)';
-  const breakdown = horizonBreakdown(R, energyName);
-  const narrative = buildNarrative(R, inputs, { car, city, vehicleLabel, yearEnd });
-  const glance = glanceRows(R, inputs, labels, yearEnd);
+  const breakdown = horizonBreakdown(result, energyName);
+  const narrative = buildNarrative(result, inputs, { car, city, vehicleLabel, yearEnd });
+  const glance = glanceRows(result, inputs, labels, yearEnd);
 
   const downloadMarkdown = () => {
-    const md = buildMarkdown(R, inputs, {
+    const md = buildMarkdown(result, inputs, {
       car,
       city,
       vehicleLabel,
@@ -127,7 +127,7 @@ export const Report = ({ R, inputs, sources }) => {
         </div>
       </div>
       <h1>
-        {R.isUberMode
+        {result.isUberMode
           ? 'Comprar un auto y pagarlo con Uber'
           : 'Comprar un auto: ¿conviene y cuánto cuesta?'}
       </h1>
@@ -231,18 +231,18 @@ export const Report = ({ R, inputs, sources }) => {
         </>
       )}
 
-      <ReportFinancing R={R} inputs={inputs} />
+      <ReportFinancing result={result} inputs={inputs} />
       <ReportTables
-        R={R}
+        result={result}
         inputs={inputs}
         yearEnd={yearEnd}
         car={car}
         vehicleLabel={vehicleLabel}
         breakdown={breakdown}
       />
-      <ReportRisk R={R} mc={mc} mcRuns={mcRuns} />
+      <ReportRisk result={result} mc={mc} mcRuns={mcRuns} />
 
-      <ReportAssumptions R={R} inputs={inputs} labels={labels} sources={sources} />
+      <ReportAssumptions result={result} inputs={inputs} labels={labels} sources={sources} />
 
       <h2 style={{ color: 'var(--muted)' }}>Apéndice · Conclusión narrativa</h2>
       <p style={{ fontSize: 12, color: 'var(--muted)', marginTop: -4 }}>

@@ -9,14 +9,18 @@ import { fmtMXN, fmtPct } from '../domain/format.js';
 // un semáforo según la regla común del 20–30% del ingreso. El ingreso es
 // opcional: si no se captura (monthlyIncome <= 0) el bloque no se muestra.
 // ============================================================================
-export const IncomeImpact = ({ R, inputs }) => {
+export const IncomeImpact = ({ result, inputs }) => {
   if (!inputs.monthlyIncome || inputs.monthlyIncome <= 0) return null;
-  const total = R.monthlyTotalOperative,
+  const total = result.monthlyTotalOperative,
     income = inputs.monthlyIncome;
   const pct = total / income,
     remaining = Math.max(0, income - total);
   const segments = [
-    R.monthlyPayment > 0 && { name: 'Mensualidad', value: R.monthlyPayment, color: '#b8431f' },
+    result.monthlyPayment > 0 && {
+      name: 'Mensualidad',
+      value: result.monthlyPayment,
+      color: '#b8431f',
+    },
     {
       name:
         inputs.vehicleType === 'electric'
@@ -24,17 +28,21 @@ export const IncomeImpact = ({ R, inputs }) => {
           : inputs.vehicleType === 'diesel'
             ? 'Diésel'
             : 'Gasolina',
-      value: R.monthlyFuel,
+      value: result.monthlyFuel,
       color: '#d65a30',
     },
-    { name: 'Seguro', value: R.monthlyIns, color: '#a87819' },
-    { name: 'Refrendo', value: R.monthlyRefrendo, color: '#6b3d8a' },
-    { name: 'Mantenimiento', value: R.monthlyMaint, color: '#1f4d8a' },
-    R.monthlyData > 0 && { name: 'Datos', value: R.monthlyData, color: '#7a6e5e' },
-    R.monthlyCarWash > 0 && { name: 'Lavado', value: R.monthlyCarWash, color: '#0e6b6b' },
-    R.monthlyTips > 0 && { name: 'Propinas', value: R.monthlyTips, color: '#3a7d44' },
-    R.monthlyMisc > 0 && { name: 'Misceláneos', value: R.monthlyMisc, color: '#9c6b1f' },
-    R.monthlyAccess > 0 && { name: 'Accesorios', value: R.monthlyAccess, color: '#8a2727' },
+    { name: 'Seguro', value: result.monthlyIns, color: '#a87819' },
+    { name: 'Refrendo', value: result.monthlyRefrendo, color: '#6b3d8a' },
+    { name: 'Mantenimiento', value: result.monthlyMaint, color: '#1f4d8a' },
+    result.monthlyData > 0 && { name: 'Datos', value: result.monthlyData, color: '#7a6e5e' },
+    result.monthlyCarWash > 0 && { name: 'Lavado', value: result.monthlyCarWash, color: '#0e6b6b' },
+    result.monthlyTips > 0 && { name: 'Propinas', value: result.monthlyTips, color: '#3a7d44' },
+    result.monthlyMisc > 0 && { name: 'Misceláneos', value: result.monthlyMisc, color: '#9c6b1f' },
+    result.monthlyAccess > 0 && {
+      name: 'Accesorios',
+      value: result.monthlyAccess,
+      color: '#8a2727',
+    },
   ].filter(Boolean);
   const stressLevel = pct > 0.5 ? 'bad' : pct > 0.3 ? 'warn' : 'ok';
   const stressText =
@@ -133,10 +141,10 @@ export const IncomeImpact = ({ R, inputs }) => {
       <div className="income-summary" style={{ marginTop: 14 }}>
         <div>
           <div className="lbl">Gasto total {inputs.horizonYears} años</div>
-          <div className="val">{fmtMXN(R.totalSpentGross)}</div>
+          <div className="val">{fmtMXN(result.totalSpentGross)}</div>
           <div style={{ fontSize: 10, color: 'var(--muted)', marginTop: 2 }}>
-            = {fmtPct(R.totalSpentGross / (income * inputs.horizonYears * 12), 1)} de tu ingreso del
-            período
+            = {fmtPct(result.totalSpentGross / (income * inputs.horizonYears * 12), 1)} de tu
+            ingreso del período
           </div>
         </div>
         <div>
@@ -145,7 +153,7 @@ export const IncomeImpact = ({ R, inputs }) => {
         </div>
         <div>
           <div className="lbl">Costo anual auto</div>
-          <div className="val">{fmtMXN(R.monthlyTotalOperative * 12)}</div>
+          <div className="val">{fmtMXN(result.monthlyTotalOperative * 12)}</div>
         </div>
       </div>
     </div>
