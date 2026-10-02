@@ -2,17 +2,27 @@ import { calculate } from './calculate.js';
 import { depreciatedValue } from './depreciation.js';
 import { clamp, positive } from './format.js';
 
-export function randomNormal(mean, std) {
+/**
+ * Normal draw via Box–Muller. `rng` returns uniform numbers in [0, 1); it
+ * defaults to Math.random and can be replaced by a seeded generator in tests.
+ */
+export function randomNormal(mean, std, rng = Math.random) {
   let u = 0,
     v = 0;
-  while (u === 0) u = Math.random();
-  while (v === 0) v = Math.random();
+  while (u === 0) u = rng();
+  while (v === 0) v = rng();
   return mean + std * Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
 }
-export function runMonteCarlo(inputs, iterations = 3000) {
+/**
+ * Re-runs calculate() `iterations` times with randomized inputs and summarizes
+ * break-even trips, liquidation value and net result (P10/P50/P90, histogram).
+ * Pass `{ rng }` to make a run reproducible; every random draw goes through it.
+ */
+export function runMonteCarlo(inputs, iterations = 3000, { rng = Math.random } = {}) {
   const results = [];
+  const normal = (mean, std) => randomNormal(mean, std, rng);
   const jitter = (val, pct, lo = -Infinity, hi = Infinity) =>
-    Math.min(hi, Math.max(lo, randomNormal(val, Math.abs(val) * pct)));
+    Math.min(hi, Math.max(lo, normal(val, Math.abs(val) * pct)));
   // FEATURE 3 — riesgo de pérdida total / robo (write-off) sobre el horizonte.
   // Probabilidad anual p → acumulada en N años: pTL = 1−(1−p)^N (acotada [0,0.95]).
   // En un arrendamiento no eres dueño del activo, así que el evento no cambia tu
@@ -33,9 +43,9 @@ export function runMonteCarlo(inputs, iterations = 3000) {
       ...inputs,
       // Ingreso / plataforma
       avgFare: Math.max(50, jitter(inputs.avgFare, 0.12)),
-      uberCommission: Math.min(0.5, Math.max(0.15, randomNormal(inputs.uberCommission, 0.02))),
+      uberCommission: Math.min(0.5, Math.max(0.15, normal(inputs.uberCommission, 0.02))),
       uberKmPerTrip: Math.max(1, jitter(inputs.uberKmPerTrip, 0.15)),
-      tripsPerHour: Math.max(1, Math.min(4, randomNormal(inputs.tripsPerHour, 0.4))),
+      tripsPerHour: Math.max(1, Math.min(4, normal(inputs.tripsPerHour, 0.4))),
       // Energía (según motor)
       fuelPrice: Math.max(8, jitter(inputs.fuelPrice, 0.08)),
       dieselPrice: Math.max(8, jitter(inputs.dieselPrice, 0.08)),
@@ -48,14 +58,14 @@ export function runMonteCarlo(inputs, iterations = 3000) {
       carWash: Math.max(0, jitter(inputs.carWash, 0.2)),
       miscellaneous: Math.max(0, jitter(inputs.miscellaneous, 0.35)),
       // Valor del activo
-      depreciationRate: Math.min(0.5, Math.max(0.05, randomNormal(inputs.depreciationRate, 0.04))),
+      depreciationRate: Math.min(0.5, Math.max(0.05, normal(inputs.depreciationRate, 0.04))),
       salesFactor: Math.max(0.3, jitter(inputs.salesFactor, 0.12)),
     };
     const c = calculate(sim);
     let finalPos = c.liquidationPosition;
     let net = c.netProjectResult;
     // FEATURE 3 — ¿hubo pérdida total en esta iteración? (sólo si eres dueño)
-    if (c.owned && totalLossProb > 0 && Math.random() < totalLossProb) {
+    if (c.owned && totalLossProb > 0 && rng() < totalLossProb) {
       // Pago del seguro ≈ valor asegurado depreciado en un punto representativo del
       // horizonte (acotamos a NO superar el valor de mercado terminal, para que la
       // pérdida total sea un RIESGO y no un premio) menos el deducible. La aseguradora
