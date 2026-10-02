@@ -37,7 +37,12 @@ describe('buildAmortization', () => {
   });
 
   it('returns an empty schedule when nothing is financed', () => {
-    expect(buildAmortization(0, 0.12, 12)).toEqual({ payment: 0, rows: [], totalPaid: 0, totalInterest: 0 });
+    expect(buildAmortization(0, 0.12, 12)).toEqual({
+      payment: 0,
+      rows: [],
+      totalPaid: 0,
+      totalInterest: 0,
+    });
   });
 });
 

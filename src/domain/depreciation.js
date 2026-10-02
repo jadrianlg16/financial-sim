@@ -2,11 +2,11 @@ import { clamp, num } from './format.js';
 
 export function effectiveDepRate(I) {
   const base = clamp(I.depreciationRate, 0, 0.95);
-  if (I.vehicleCondition !== 'used') return base;             // auto nuevo: comportamiento idéntico
+  if (I.vehicleCondition !== 'used') return base; // auto nuevo: comportamiento idéntico
   let usedRate = clamp(I.usedDepreciationRate != null ? I.usedDepreciationRate : 0.12, 0, 0.95);
-  const ageYears = Math.max(0, 2026 - num(I.carYear, 2026));  // antigüedad actual
-  usedRate -= 0.005 * ageYears;                               // se aplana ~0.5 pts/año de edad
-  return clamp(usedRate, 0.04, 0.30);                         // bien acotada
+  const ageYears = Math.max(0, 2026 - num(I.carYear, 2026)); // antigüedad actual
+  usedRate -= 0.005 * ageYears; // se aplana ~0.5 pts/año de edad
+  return clamp(usedRate, 0.04, 0.3); // bien acotada
 }
 
 // Depreciación con MÉTODO seleccionable (el activo nunca vale menos de 0):

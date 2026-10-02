@@ -14,7 +14,13 @@ describe('buildAIPrompt', () => {
 describe('applyImportedJson', () => {
   it('copies known fields, coerces numbers and returns the sources', () => {
     const json = {
-      vehicle: { name: 'BYD Dolphin Mini', type: 'electric', price: '358800', kmPerKwh: 7.1, condition: 'new' },
+      vehicle: {
+        name: 'BYD Dolphin Mini',
+        type: 'electric',
+        price: '358800',
+        kmPerKwh: 7.1,
+        condition: 'new',
+      },
       costs: { monthlyInsurance: 1800, insuranceMode: 'pctOfValue' },
       uber: { taxRegime: 'net', uberCommission: '0.27' },
       sources: { price: 'https://example.com' },

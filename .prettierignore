@@ -1,0 +1,7 @@
+dist
+node_modules
+package-lock.json
+# Byte-exact characterization fixtures: never reformat.
+test/__snapshots__
+# Prose is formatted by hand.
+*.md

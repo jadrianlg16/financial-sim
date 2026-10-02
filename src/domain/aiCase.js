@@ -124,8 +124,9 @@ export function applyImportedJson(json, currentInputs) {
   const merged = { ...currentInputs };
   try {
     if (json.vehicle) {
-      const v = json.vehicle; merged.carPreset = 'custom';
-      if (v.name) merged.carName = v.name;   // guardar nombre real del auto importado (audit fix)
+      const v = json.vehicle;
+      merged.carPreset = 'custom';
+      if (v.name) merged.carName = v.name; // guardar nombre real del auto importado (audit fix)
       if (v.type) merged.vehicleType = v.type;
       if (v.plugInHybrid != null) merged.plugInHybrid = !!v.plugInHybrid;
       if (v.price != null) merged.carPrice = +v.price;
@@ -139,7 +140,8 @@ export function applyImportedJson(json, currentInputs) {
       // FEATURE 1 — depreciación de usados y garantía. Si el JSON no trae garantía,
       // se infiere de la condición (usado=0, nuevo=3) para mantener la semántica.
       if (v.usedDepreciationRate != null) merged.usedDepreciationRate = +v.usedDepreciationRate;
-      if (v.warrantyYearsRemaining != null) merged.warrantyYearsRemaining = +v.warrantyYearsRemaining;
+      if (v.warrantyYearsRemaining != null)
+        merged.warrantyYearsRemaining = +v.warrantyYearsRemaining;
       else if (v.condition === 'used') merged.warrantyYearsRemaining = 0;
       else if (v.condition === 'new') merged.warrantyYearsRemaining = 3;
       if (v.description) merged.carDescription = v.description;
@@ -148,7 +150,8 @@ export function applyImportedJson(json, currentInputs) {
     if (json.costs) {
       const c = json.costs;
       if (c.monthlyInsurance != null) merged.monthlyInsurance = +c.monthlyInsurance;
-      if (c.insuranceMode === 'fixed' || c.insuranceMode === 'pctOfValue') merged.insuranceMode = c.insuranceMode;
+      if (c.insuranceMode === 'fixed' || c.insuranceMode === 'pctOfValue')
+        merged.insuranceMode = c.insuranceMode;
       if (c.insurancePctOfValue != null) merged.insurancePctOfValue = +c.insurancePctOfValue;
       if (c.annualMaintenance != null) merged.annualMaintenance = +c.annualMaintenance;
       if (c.monthlyRefrendo != null) merged.monthlyRefrendo = +c.monthlyRefrendo;
@@ -172,14 +175,16 @@ export function applyImportedJson(json, currentInputs) {
     }
     if (json.uber) {
       const u = json.uber;
-      if (u.taxRegime === 'resico' || u.taxRegime === 'gross' || u.taxRegime === 'net') merged.taxRegime = u.taxRegime;
+      if (u.taxRegime === 'resico' || u.taxRegime === 'gross' || u.taxRegime === 'net')
+        merged.taxRegime = u.taxRegime;
       if (u.resicoRate != null) merged.resicoRate = +u.resicoRate;
       if (u.uberCommission != null) merged.uberCommission = +u.uberCommission;
       if (u.taxRate != null) merged.taxRate = +u.taxRate;
     }
     if (json.financing) {
       const f = json.financing;
-      if (f.financeType === 'annuity' || f.financeType === 'balloon' || f.financeType === 'lease') merged.financeType = f.financeType;
+      if (f.financeType === 'annuity' || f.financeType === 'balloon' || f.financeType === 'lease')
+        merged.financeType = f.financeType;
       if (f.balloonPct != null) merged.balloonPct = +f.balloonPct;
       if (f.leaseMonthly != null) merged.leaseMonthly = +f.leaseMonthly;
       if (f.leaseDownPayment != null) merged.leaseDownPayment = +f.leaseDownPayment;
@@ -200,6 +205,8 @@ export function applyImportedJson(json, currentInputs) {
       if (p.theftDeductiblePct != null) merged.theftDeductiblePct = +p.theftDeductiblePct;
     }
     const sources = json.sources && typeof json.sources === 'object' ? json.sources : null;
-    return { ok:true, inputs:merged, sources };
-  } catch (e) { return { ok:false, error:e.message }; }
+    return { ok: true, inputs: merged, sources };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
 }

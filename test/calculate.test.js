@@ -4,7 +4,8 @@ import { DEFAULT_INPUTS } from '../src/domain/defaults.js';
 import { pmt } from '../src/domain/finance.js';
 
 const YEAR = 2026;
-const run = (overrides = {}) => calculate({ ...DEFAULT_INPUTS, carYear: YEAR, ...overrides }, { year: YEAR });
+const run = (overrides = {}) =>
+  calculate({ ...DEFAULT_INPUTS, carYear: YEAR, ...overrides }, { year: YEAR });
 
 describe('calculate(DEFAULT_INPUTS)', () => {
   const R = run();
@@ -28,7 +29,10 @@ describe('calculate(DEFAULT_INPUTS)', () => {
 
   it('keeps the project totals consistent with each other', () => {
     expect(R.totalProjectCost).toBeCloseTo(R.totalSpentGross - R.terminalRecovery, 6);
-    expect(R.netProjectResult).toBeCloseTo(R.cumRevenue + R.terminalRecovery - R.totalSpentGross, 6);
+    expect(R.netProjectResult).toBeCloseTo(
+      R.cumRevenue + R.terminalRecovery - R.totalSpentGross,
+      6,
+    );
     expect(R.terminalRecovery).toBeCloseTo(R.actualSalePrice - R.remainingDebt, 6);
     expect(R.valueAtEnd).toBeCloseTo(279900 * 0.8 ** 4, 6);
   });
@@ -90,7 +94,12 @@ describe('calculate() across modes', () => {
   });
 
   it('flags an EV whose daily distance exceeds its usable range', () => {
-    const R = run({ vehicleType: 'electric', batteryCapacityKwh: 20, kmPerKwh: 5, uberKmPerTrip: 20 });
+    const R = run({
+      vehicleType: 'electric',
+      batteryCapacityKwh: 20,
+      kmPerKwh: 5,
+      uberKmPerTrip: 20,
+    });
     expect(R.dailyRangeKm).toBeCloseTo(20 * 0.9 * 5, 9);
     expect(R.evRangeShortfall).toBe(true);
     expect(R.feasible).toBe(false);

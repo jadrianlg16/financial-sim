@@ -8,7 +8,9 @@
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "format": "prettier . --write",
+    "format:check": "prettier . --check"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",
@@ -19,6 +21,7 @@
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.4",
     "baseline-browser-mapping": "^2.10.12",
+    "prettier": "^3.9.9",
     "vite": "^6.0.7",
     "vitest": "^4.1.11"
   }

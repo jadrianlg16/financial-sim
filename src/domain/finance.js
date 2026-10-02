@@ -4,19 +4,39 @@ export function pmt(principal, annualRate, months) {
   if (months <= 0) return 0;
   const r = annualRate / 12;
   if (r === 0) return principal / months;
-  return principal * r / (1 - Math.pow(1 + r, -months));
+  return (principal * r) / (1 - Math.pow(1 + r, -months));
 }
 export function buildAmortization(principal, annualRate, months) {
-  if (principal <= 0 || months <= 0) return { payment:0, rows:[], totalPaid:0, totalInterest:0 };
+  if (principal <= 0 || months <= 0)
+    return { payment: 0, rows: [], totalPaid: 0, totalInterest: 0 };
   const payment = pmt(principal, annualRate, months);
   const r = annualRate / 12;
-  let bal = principal; const rows = []; let cumInt = 0, cumPrin = 0;
+  let bal = principal;
+  const rows = [];
+  let cumInt = 0,
+    cumPrin = 0;
   for (let m = 1; m <= months; m++) {
-    const interest = bal * r; const principalPart = payment - interest;
-    bal = Math.max(0, bal - principalPart); cumInt += interest; cumPrin += principalPart;
-    rows.push({ month:m, payment, interest, principal:principalPart, balance:bal, cumInt, cumPrin });
+    const interest = bal * r;
+    const principalPart = payment - interest;
+    bal = Math.max(0, bal - principalPart);
+    cumInt += interest;
+    cumPrin += principalPart;
+    rows.push({
+      month: m,
+      payment,
+      interest,
+      principal: principalPart,
+      balance: bal,
+      cumInt,
+      cumPrin,
+    });
   }
-  return { payment, rows, totalPaid: payment*months, totalInterest: payment*months - principal };
+  return {
+    payment,
+    rows,
+    totalPaid: payment * months,
+    totalInterest: payment * months - principal,
+  };
 }
 
 // Amortización con PAGO FINAL / GLOBO (residual): común en México (crédito con
@@ -25,25 +45,40 @@ export function buildAmortization(principal, annualRate, months) {
 // se liquida en el último mes. Pagos mensuales más bajos que una anualidad pura.
 //   A = (P − balloon·(1+i)^−n) · i(1+i)^n / [(1+i)^n − 1]
 export function buildBalloonAmortization(principal, annualRate, months, balloonAmount) {
-  if (principal <= 0 || months <= 0) return { payment:0, rows:[], totalPaid:0, totalInterest:0, balloon:0 };
+  if (principal <= 0 || months <= 0)
+    return { payment: 0, rows: [], totalPaid: 0, totalInterest: 0, balloon: 0 };
   const balloon = clamp(balloonAmount, 0, principal);
   const r = annualRate / 12;
   let payment;
   if (r === 0) {
     payment = (principal - balloon) / months;
   } else {
-    const pvBalloon = balloon * Math.pow(1 + r, -months);       // VP del globo a tasa del crédito
-    payment = (principal - pvBalloon) * r / (1 - Math.pow(1 + r, -months));
+    const pvBalloon = balloon * Math.pow(1 + r, -months); // VP del globo a tasa del crédito
+    payment = ((principal - pvBalloon) * r) / (1 - Math.pow(1 + r, -months));
   }
-  let bal = principal; const rows = []; let cumInt = 0, cumPrin = 0;
+  let bal = principal;
+  const rows = [];
+  let cumInt = 0,
+    cumPrin = 0;
   for (let m = 1; m <= months; m++) {
     const interest = bal * r;
     let principalPart = payment - interest;
     // En el último mes se liquida también el globo (sale del saldo, no del pago mensual regular).
-    const balloonThisMonth = (m === months) ? bal - principalPart : 0;
+    const balloonThisMonth = m === months ? bal - principalPart : 0;
     principalPart += balloonThisMonth;
-    bal = Math.max(0, bal - principalPart); cumInt += interest; cumPrin += principalPart;
-    rows.push({ month:m, payment: payment + balloonThisMonth, interest, principal:principalPart, balance:bal, cumInt, cumPrin, balloon: balloonThisMonth });
+    bal = Math.max(0, bal - principalPart);
+    cumInt += interest;
+    cumPrin += principalPart;
+    rows.push({
+      month: m,
+      payment: payment + balloonThisMonth,
+      interest,
+      principal: principalPart,
+      balance: bal,
+      cumInt,
+      cumPrin,
+      balloon: balloonThisMonth,
+    });
   }
   // totalPaid = mensualidades regulares + el globo final; interés total = todo lo pagado − principal.
   const totalPaid = payment * months + balloon;
@@ -67,26 +102,38 @@ export function npv(ratePerPeriod, cashflows) {
 // TIR por bisección robusta: requiere un cambio de signo en los flujos.
 export function irr(cashflows, lo = -0.95, hi = 5) {
   const f = (r) => npv(r, cashflows);
-  let flo = f(lo), fhi = f(hi);
+  let flo = f(lo),
+    fhi = f(hi);
   if (!isFinite(flo) || !isFinite(fhi) || flo * fhi > 0) return NaN;
   for (let k = 0; k < 200; k++) {
-    const mid = (lo + hi) / 2, fmid = f(mid);
+    const mid = (lo + hi) / 2,
+      fmid = f(mid);
     if (!isFinite(fmid)) return NaN;
     if (Math.abs(fmid) < 1e-7) return mid;
-    if (flo * fmid < 0) { hi = mid; fhi = fmid; } else { lo = mid; flo = fmid; }
+    if (flo * fmid < 0) {
+      hi = mid;
+      fhi = fmid;
+    } else {
+      lo = mid;
+      flo = fmid;
+    }
   }
   return (lo + hi) / 2;
 }
 // Tasa periódica que resuelve: netoRecibido = pago · [1−(1+j)^−n]/j  (para CAT).
 export function solvePeriodicRate(netReceived, payment, n) {
   if (netReceived <= 0 || payment <= 0 || n <= 0) return 0;
-  const g = (j) => (j === 0 ? payment * n : payment * (1 - Math.pow(1 + j, -n)) / j) - netReceived;
-  let lo = 1e-9, hi = 5;
+  const g = (j) =>
+    (j === 0 ? payment * n : (payment * (1 - Math.pow(1 + j, -n))) / j) - netReceived;
+  let lo = 1e-9,
+    hi = 5;
   if (g(lo) * g(hi) > 0) return 0;
   for (let k = 0; k < 200; k++) {
-    const mid = (lo + hi) / 2, gm = g(mid);
+    const mid = (lo + hi) / 2,
+      gm = g(mid);
     if (Math.abs(gm) < 1e-6) return mid;
-    if (g(lo) * gm < 0) hi = mid; else lo = mid;
+    if (g(lo) * gm < 0) hi = mid;
+    else lo = mid;
   }
   return (lo + hi) / 2;
 }

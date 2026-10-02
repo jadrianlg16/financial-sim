@@ -16,17 +16,29 @@ import { CAR_PRESETS } from './constants.js';
 // lógica del Sidebar: precio/kmpl/tipo/condición + ajustes típicos de usado). No
 // muta: devuelve un nuevo objeto. (FEATURE A)
 export function applyCarPresetTo(prev, k) {
-  if (k === 'custom') return { ...prev, carPreset:'custom' };
+  if (k === 'custom') return { ...prev, carPreset: 'custom' };
   const c = CAR_PRESETS[k];
   if (!c) return prev;
-  const next = { ...prev, carPreset:k, carPrice:c.price, kmpl:c.kmpl||prev.kmpl, vehicleType:c.type,
-    plugInHybrid:!!c.plugInHybrid, kmPerKwh:c.kmPerKwh||prev.kmPerKwh, batteryCapacityKwh:c.batteryCapacityKwh||prev.batteryCapacityKwh };
+  const next = {
+    ...prev,
+    carPreset: k,
+    carPrice: c.price,
+    kmpl: c.kmpl || prev.kmpl,
+    vehicleType: c.type,
+    plugInHybrid: !!c.plugInHybrid,
+    kmPerKwh: c.kmPerKwh || prev.kmPerKwh,
+    batteryCapacityKwh: c.batteryCapacityKwh || prev.batteryCapacityKwh,
+  };
   const cond = c.condition || 'new';
   next.vehicleCondition = cond;
   next.carYear = c.year || 2026;
   next.odometerKm = c.odometerKm || 0;
-  if (cond === 'used') { if (!prev.repairReserveAnnual) next.repairReserveAnnual = 6000; if (prev.interestRate <= 0.135) next.interestRate = 0.16; }
-  else if (prev.repairReserveAnnual === 6000) { next.repairReserveAnnual = 0; }
+  if (cond === 'used') {
+    if (!prev.repairReserveAnnual) next.repairReserveAnnual = 6000;
+    if (prev.interestRate <= 0.135) next.interestRate = 0.16;
+  } else if (prev.repairReserveAnnual === 6000) {
+    next.repairReserveAnnual = 0;
+  }
   return next;
 }
 export const cloneInputs = (i) => JSON.parse(JSON.stringify(i));
