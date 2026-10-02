@@ -56,7 +56,7 @@ describe('runMonteCarlo', () => {
   });
 
   it('pins a seeded run of the default scenario (guards the order of random draws)', () => {
-    const mc = runMonteCarlo(DEFAULT_INPUTS, 1000, { rng: seededRng(2026) });
+    const mc = runMonteCarlo(DEFAULT_INPUTS, 1000, { rng: seededRng(2026), year: 2026 });
     expect(mc.feasibleRate).toBe(1);
     expect(mc.be.p10).toBeCloseTo(128.6408, 4);
     expect(mc.be.p50).toBeCloseTo(155.0825, 4);
