@@ -120,7 +120,7 @@ npm run format:check   # Prettier (npm run format rewrites)
 
 The tests cover the domain layer, the saved-state checks and the report's text builders, with no browser and no network. The characterization snapshots live in `test/__snapshots__/calculate/`, one JSON file per scenario. When a change to the model is intended, regenerate them with `npx vitest run -u` and review the JSON diff like any other change.
 
-[`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs `npm ci`, lint, the format check, the tests and the build on Ubuntu and Windows with Node 20 and 22. The workflow is written and every step passes locally, but it has not run on GitHub yet.
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs `npm ci`, lint, the format check, the tests and the build on Ubuntu and Windows with Node 20 and 22.
 
 ## Configuration
 
