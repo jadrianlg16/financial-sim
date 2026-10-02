@@ -28,6 +28,10 @@ export const Sidebar = ({ inputs, setInputs, onReset, onSave }) => {
       /* almacenamiento no disponible: el modo sólo dura esta sesión */
     }
   };
+  // Borrar todo pide un segundo clic en un botón distinto. Es una confirmación en la
+  // página y no window.confirm(), que los iframes con sandbox (el portafolio)
+  // bloquean; también evita que un solo clic engañado borre los datos.
+  const [confirmingReset, setConfirmingReset] = useState(false);
   const set = (k, v) => setInputs((prev) => ({ ...prev, [k]: v }));
   const groupProps = { inputs, setInputs, set, mode };
   return (
@@ -44,10 +48,39 @@ export const Sidebar = ({ inputs, setInputs, onReset, onSave }) => {
         <button className="btn outline" style={{ flex: 1, fontSize: 11 }} onClick={onSave}>
           <Save size={11} /> Guardar escenario
         </button>
-        <button className="btn ghost" onClick={onReset} title="Resetear">
+        <button
+          className="btn ghost"
+          onClick={() => setConfirmingReset((c) => !c)}
+          title="Resetear"
+          aria-expanded={confirmingReset}
+        >
           <RotateCcw size={12} />
         </button>
       </div>
+      {confirmingReset && (
+        <div className="field-note" role="alert" style={{ marginTop: -10, marginBottom: 18 }}>
+          ¿Borrar el escenario, los escenarios guardados y las fuentes importadas?
+          <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+            <button
+              className="btn accent"
+              style={{ fontSize: 11 }}
+              onClick={() => {
+                setConfirmingReset(false);
+                onReset();
+              }}
+            >
+              Sí, borrar todo
+            </button>
+            <button
+              className="btn outline"
+              style={{ fontSize: 11 }}
+              onClick={() => setConfirmingReset(false)}
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
 
       <div style={{ marginBottom: 18 }}>
         <Segmented
