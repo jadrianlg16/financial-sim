@@ -8,7 +8,7 @@ It is for someone in Mexico deciding whether to buy a car (new or used, cash or 
 
 **[Live demo](https://www.adriangaona.dev/demos/financial-sim/)** · [Project page](https://www.adriangaona.dev/work/financial-sim)
 
-> **The UI is in Spanish on purpose.** The target user is in Mexico, so amounts are in MXN and the defaults (fares, fuel and electricity prices, platform commission, RESICO tax withholding) are Mexican. This README is in English. In the app, the header reads **Auto·Pilot** and the browser tab reads *Auto-Pilot Uber Car Simulator*; the repo and portfolio call it Financial Sim.
+> **The UI is in Spanish on purpose.** The target user is in Mexico, so amounts are in MXN and the defaults (fares, fuel and electricity prices, platform commission, RESICO tax withholding) are Mexican. This README and the code comments are in English. In the app, the header reads **Auto·Pilot** and the browser tab reads *Auto-Pilot Uber Car Simulator*; the repo and portfolio call it Financial Sim.
 
 ![Dashboard of the simulator: input sidebar on the left, a "Viable y manejable" verdict, and the purchase-decision summary with total cost of ownership, cost per km, equivalent annual cost, NPV and real credit cost cards](docs/screenshot-dashboard.png)
 
@@ -50,7 +50,7 @@ React 19, Vite 6, Recharts 2 and lucide-react, written in plain JavaScript (JSX)
 - **The model is separate from the UI.** `src/domain/` is plain JavaScript with no React imports, and `src/components/` only presents what it returns. That keeps the math runnable outside a browser and is what the tests exercise. [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) has the layer map and the dependency rule.
 - **Time and randomness are inputs.** `src/domain/year.js` is the only code that reads the clock, and the Monte Carlo draws from an injectable random source. The app uses the real year and `Math.random`; tests pin both, so results are reproducible.
 - **Outside data is untrusted.** The LLM's JSON goes through a field table: option fields must hold a known value, numbers must be finite, text must be a string and is length-capped. Anything else is skipped rather than reaching the model (an unknown powertrain used to zero the fuel cost). Its `sources` keep only plain keys with string values (at most 100), and a source becomes a link only if it parses as an `http:` or `https:` URL, shown with its hostname. Saved state gets the same schema check on load, and the inputs that size the model's loops are capped (horizon 30 years, loan and lease terms 120 months) wherever they come from ([`src/domain/inputSchema.js`](src/domain/inputSchema.js)).
-- **Tabs load on demand.** Each tab is a lazy chunk, so the first download is the shell, the sidebar and the model (a 291 kB entry chunk instead of one 841 kB bundle). The default Dashboard still pulls the 383 kB charting chunk.
+- **Tabs load on demand.** Each tab is a lazy chunk, so the first download is the shell, the sidebar and the model: a 277 kB entry chunk, plus 31 kB of CSS, out of 843 kB of JavaScript in all. The default Dashboard still pulls the 383 kB charting chunk.
 - **The copy is separate from the code.** Tooltip, glossary and source-label text live in `src/content/`, because the explanations are the product for someone who doesn't know finance.
 - **Storage can't break the app.** Every `localStorage` access is wrapped in `try/catch` (`src/storage/persistence.js`, `src/App.jsx`, `src/components/Sidebar.jsx`), so private mode, full storage or a sandboxed iframe (where storage throws) only loses persistence, never the calculation. Saved state is schema-checked before use, and error boundaries turn a render error into a message with a way to clear the saved data instead of a blank page.
 
@@ -88,7 +88,7 @@ npm run build      # static bundle in dist/
 npm run preview    # serves dist/ at http://127.0.0.1:4173
 ```
 
-Docker (multi-stage: builds on `node:22-alpine`, serves with `nginx:alpine` and the security headers in [`nginx/default.conf`](nginx/default.conf): a Content-Security-Policy limited to the app's own files, no cross-origin framing, no server version):
+Docker (multi-stage: builds on `node:22-alpine`, serves with `nginx:alpine` running as its unprivileged `nginx` user, with the security headers in [`nginx/default.conf`](nginx/default.conf): a Content-Security-Policy limited to the app's own files, no cross-origin framing, no server version):
 
 ```bash
 docker build -t financial-sim .
@@ -144,12 +144,15 @@ src/
 │   ├── year.js                 the reference year (the only clock read)
 │   └── compare.js, carDisplay.js, constants.js, defaults.js, format.js
 ├── components/                 one file per tab or panel, plus CrashScreen
+│   ├── dashboard/              the Dashboard's KPI grid and chart cards
+│   ├── comparison/             a car column, the verdict, the chart and the decision table
+│   ├── formulas/               the formula groups (credit, project, economics)
 │   ├── sidebar/                the side panel's input groups
 │   ├── report/                 report sections and its text and Markdown builders
 │   └── ui/                     Field, Group, Info, Segmented, SourceCell, ErrorBoundary
 ├── content/                    tooltip, glossary and source-label copy (Spanish)
 ├── storage/persistence.js      localStorage access and the saved-state check
-└── theme/FontsAndTheme.jsx     CSS variables
+└── theme/theme.css             color variables, layout and component styles
 test/
 ├── *.test.js                   unit tests per module, plus the characterization test
 ├── __snapshots__/calculate/    full calculate() output per scenario (JSON)
@@ -162,7 +165,7 @@ docs/
 └── screenshot-*.png
 .github/workflows/ci.yml        lint, format check, tests and build
 nginx/default.conf              security headers for the Docker image
-Dockerfile                      build with Node, serve dist/ with nginx
+Dockerfile                      build with Node, serve dist/ with nginx as a non-root user
 ```
 
 ## Limitations

@@ -15,10 +15,13 @@ src/
   domain/             the financial model — pure JS, no React
   content/            user-facing copy (tips, glossary, source labels)
   components/         presentation
+    dashboard/        the Dashboard's sections (KPI grid, financing, cost and value charts)
+    comparison/       the comparison tab's car column, verdict, chart and decision table
+    formulas/         the formula groups (credit, project, economics)
     sidebar/          the side panel's input groups
     report/           report sections, plus its text and Markdown builders (plain JS)
     ui/               reusable primitives (Field, Group, Info, Segmented, SourceCell, ErrorBoundary)
-  theme/              fonts + CSS custom properties
+  theme/theme.css     color variables, layout and component styles (imported by main.jsx)
   storage/            localStorage read helpers
 test/                 Vitest suites for domain/ and report/reportText.js
 ```
@@ -156,6 +159,7 @@ Lint (`npm run lint`, ESLint with React and React Hooks rules) and formatting
 This codebase was originally a single 2,980-line `uber_car_simulator.jsx`. It was
 split into the modules above with no behavior change, and the file-header
 requirements log became [REQUISITOS.md](REQUISITOS.md). Later, `calculate()` was
-divided into the stages above under the characterization snapshots, and the two
-largest components (the sidebar and the report) were split into the `sidebar/`
-and `report/` folders.
+divided into the stages above under the characterization snapshots, the largest
+components were split into section folders (`sidebar/`, `report/`, `dashboard/`,
+`comparison/`, `formulas/`) so none passes 300 lines, and the theme CSS moved
+from a JS template string into `theme/theme.css`.
