@@ -4,24 +4,25 @@ import { TIPS } from '../content/tips.js';
 import { fmtFixed, fmtMXN, fmtN, fmtPct } from '../domain/format.js';
 
 // ============================================================================
-// BLOQUE: RESUMEN DE DECISIÓN DE COMPRA
+// BLOCK: PURCHASE DECISION SUMMARY
 // ----------------------------------------------------------------------------
-// Las cifras que mueven una decisión de compra, con ingeniería económica: TCO,
-// costo por km, CAE (compara autos con horizontes distintos), valor presente del
-// costo, costo por depreciación, CAT y financiar contra contado. Aplica en todos
-// los modos, incluido "Sin Uber".
+// The figures that drive a purchase decision, from engineering economics: TCO,
+// cost per km, CAE (equivalent annual cost; compares cars with different
+// horizons), present value of the cost, depreciation cost, CAT (the all-in
+// annual cost of the loan) and financing vs. paying cash. It applies in every
+// mode, "Sin Uber" (no Uber) included.
 // ============================================================================
 export const DecisionSummary = ({ result, inputs }) => {
   const financed = result.financed > 0;
   const fvc = result.financeVsCashPV;
-  // Titular en lenguaje sencillo: una sola frase que resume la conclusión, construida
-  // desde result y consciente de arrendamiento y Uber. Va antes de las tarjetas KPI.
+  // Plain-language headline: one sentence that sums up the conclusion, built from
+  // result and aware of leases and Uber. It goes before the KPI cards.
   const headline = (() => {
     const costoTxt = result.isLease
       ? `Rentar este auto te cuesta ~${fmtMXN(result.monthlyTotalOperative)} al mes`
       : `Este auto te cuesta ~${fmtMXN(result.monthlyTotalOperative)} al mes`;
     const kmTxt = isFinite(result.costPerKm) ? ` y ${fmtMXN(result.costPerKm, 2)} por km` : '';
-    // Verdict de pago: lease, financiado (financiar vs contado) o contado.
+    // Payment verdict: lease, financed (finance vs. cash) or cash.
     let pagoTxt;
     if (result.isLease) {
       pagoTxt = 'lo rentas, así que no eres dueño ni recuperas reventa';
@@ -33,7 +34,7 @@ export const DecisionSummary = ({ result, inputs }) => {
     } else {
       pagoTxt = 'lo pagas de contado';
     }
-    // Si es modo Uber y el plan es viable, decir en cuántas horas/semana se paga solo.
+    // In Uber mode with a viable plan, say how many hours a week pay for the car.
     const uberTxt =
       result.isUberMode &&
       result.feasible &&

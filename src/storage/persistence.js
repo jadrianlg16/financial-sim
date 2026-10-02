@@ -16,8 +16,8 @@ export const SIDEBAR_MODE_KEY = 'autopilot.sidebarMode';
 const MAX_SAVED = 50;
 const HEX_COLOR = /^#[0-9a-f]{6}$/i;
 
-// Nivel de detalle del panel: 'basic' muestra lo esencial para una primera
-// decisión; 'advanced', todas las variables. Se guarda aparte de los inputs.
+// Sidebar detail level: 'basic' shows the essentials for a first decision;
+// 'advanced', every variable. Saved apart from the inputs.
 export const readSidebarMode = () => {
   try {
     const m = localStorage.getItem(SIDEBAR_MODE_KEY);

@@ -3,14 +3,14 @@ import { EconomicsFormulas } from './formulas/EconomicsFormulas.jsx';
 import { ProjectFormulas } from './formulas/ProjectFormulas.jsx';
 
 // ============================================================================
-// PÁGINA: FÓRMULAS
+// PAGE: FÓRMULAS (FORMULAS)
 // ----------------------------------------------------------------------------
-// Cada ecuación del simulador con los valores actuales sustituidos, para auditar
-// de dónde sale cada número: anualidad (más globo y arrendamiento), VP, VF, costo
-// del dinero, depreciación, contribución por viaje, punto de equilibrio,
-// intensidad de trabajo, inflación, costo y resultado neto, VPN, TIR, CAE, CAT,
-// financiar vs. contado, $/km, seguro como % del valor, y carga y autonomía del
-// EV. Cada fórmula explica sus términos en lenguaje simple.
+// Every equation of the simulator with the current values substituted, to audit
+// where each number comes from: annuity (plus balloon and lease), PV, FV, cost of
+// money, depreciation, contribution per trip, break-even, work intensity,
+// inflation, net cost and result, VPN (NPV), TIR (IRR), CAE (EAC), CAT, finance
+// vs. cash, $/km, insurance as % of value, and EV charging and range. Each
+// formula explains its terms in plain language.
 // ============================================================================
 export const Formulas = ({ result, inputs }) => (
   <div style={{ maxWidth: 820 }}>

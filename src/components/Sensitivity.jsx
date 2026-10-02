@@ -4,11 +4,11 @@ import { fmtMXN, fmtN } from '../domain/format.js';
 import { sensitivity } from '../domain/sensitivity.js';
 
 // ============================================================================
-// PÁGINA: SENSIBILIDAD
+// PAGE: SENSIBILIDAD (SENSITIVITY)
 // ----------------------------------------------------------------------------
-// Gráfica tornado: cuánto se mueve el punto de equilibrio (o el costo neto, sin
-// Uber) cuando cada variable sube o baja por separado, ordenadas de mayor a menor
-// impacto. Verde = el cambio ayuda; rojo = perjudica.
+// Tornado chart: how much the break-even (or the net cost, without Uber) moves
+// when each variable goes up or down on its own, sorted from largest to smallest
+// impact. Green = the change helps; red = it hurts.
 // ============================================================================
 export const Sensitivity = ({ inputs }) => {
   const data = useMemo(() => sensitivity(inputs), [inputs]);

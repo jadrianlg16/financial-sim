@@ -1,8 +1,7 @@
 import { SourceCell, sourceLabel } from '../ui/SourceCell.jsx';
 import { fmtMXN, fmtPct } from '../../domain/format.js';
 
-// Escenarios de liquidación, supuestos del análisis, fuentes de un caso importado
-// y notas del usuario.
+// Liquidation scenarios, analysis assumptions, sources of an imported case and user notes.
 export const ReportAssumptions = ({ result, inputs, labels, sources }) => (
   <>
     <h2>Escenarios de liquidación</h2>

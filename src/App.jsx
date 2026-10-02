@@ -60,17 +60,17 @@ const TabLoading = () => (
 // ============================================================================
 // APP
 // ----------------------------------------------------------------------------
-// Pestañas: Dashboard · Comparar · Sensibilidad · Monte Carlo · Fórmulas ·
-// Importar/AI · Reporte · Glosario. Guarda el estado global: inputs, escenarios
-// guardados y fuentes importadas. `inputs` es la única fuente de verdad: cambiar
-// cualquier variable en el panel lateral recalcula result (useMemo) y todas las
-// pestañas lo leen. El estado se guarda en localStorage para sobrevivir a una
-// recarga.
+// Tabs: Dashboard · Comparar (compare) · Sensibilidad (sensitivity) · Monte
+// Carlo · Fórmulas · Importar/AI (import) · Reporte (report) · Glosario
+// (glossary). Holds the global state: inputs, saved scenarios and imported
+// sources. `inputs` is the single source of truth: changing any variable in the
+// sidebar recalculates result (useMemo) and every tab reads it. State is saved
+// to localStorage so it survives a reload.
 // ============================================================================
 export default function App() {
   const [persisted] = useState(readPersisted);
   const [inputs, setInputs] = useState(() => persisted?.inputs ?? DEFAULT_INPUTS);
-  // Los escenarios guardados se almacenan ligeros (sin el resultado) y se recalculan al cargar.
+  // Saved scenarios are stored without their result and recalculated on load.
   const [saved, setSaved] = useState(() =>
     (persisted?.saved ?? []).map((s) => ({ ...s, result: calculate(s.inputs) })),
   );
@@ -83,7 +83,7 @@ export default function App() {
       const slimSaved = saved.map(({ name, inputs, color }) => ({ name, inputs, color }));
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ inputs, saved: slimSaved, sources }));
     } catch {
-      /* almacenamiento lleno o no disponible: el cálculo sigue funcionando */
+      /* storage full or unavailable: the calculation keeps working */
     }
   }, [inputs, saved, sources]);
   const handleSave = () => {
@@ -105,7 +105,7 @@ export default function App() {
     try {
       localStorage.removeItem(STORAGE_KEY);
     } catch {
-      /* almacenamiento no disponible: no hay nada que borrar */
+      /* storage unavailable: there is nothing to delete */
     }
   };
   return (
@@ -163,7 +163,7 @@ export default function App() {
               <HelpCircle size={13} /> Glosario
             </button>
           </div>
-          {/* Si una pestaña falla al dibujarse, sólo esa pestaña muestra el error. */}
+          {/* If a tab fails to render, only that tab shows the error. */}
           <ErrorBoundary
             key={tab}
             fallback={({ retry }) => (

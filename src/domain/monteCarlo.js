@@ -21,7 +21,7 @@ export function randomNormal(mean, std, rng = Math.random) {
  * seeded results. The Monte Carlo tab lists them from this table.
  */
 export const MC_VARIATIONS = [
-  // Ingreso y plataforma
+  // Income and platform
   {
     key: 'avgFare',
     group: 'income',
@@ -56,7 +56,7 @@ export const MC_VARIATIONS = [
     min: 1,
     max: 4,
   },
-  // Energía (cada motor usa sólo la suya)
+  // Energy (each powertrain only uses its own)
   { key: 'fuelPrice', group: 'energy', label: 'gasolina', spread: '±8%', rel: 0.08, min: 8 },
   { key: 'dieselPrice', group: 'energy', label: 'diésel', spread: '±8%', rel: 0.08, min: 8 },
   {
@@ -75,7 +75,7 @@ export const MC_VARIATIONS = [
     rel: 0.1,
     min: 2,
   },
-  // Costos recurrentes
+  // Recurring costs
   {
     key: 'annualMaintenance',
     group: 'costs',
@@ -95,7 +95,7 @@ export const MC_VARIATIONS = [
   { key: 'monthlyRefrendo', group: 'costs', label: 'refrendo', spread: '±20%', rel: 0.2, min: 0 },
   { key: 'carWash', group: 'costs', label: 'lavado', spread: '±20%', rel: 0.2, min: 0 },
   { key: 'miscellaneous', group: 'costs', label: 'misceláneos', spread: '±35%', rel: 0.35, min: 0 },
-  // Valor del auto
+  // Car value
   {
     key: 'depreciationRate',
     group: 'value',
@@ -123,16 +123,16 @@ export const MC_VARIATIONS = [
 export function runMonteCarlo(inputs, iterations = 3000, { rng = Math.random, year } = {}) {
   const results = [];
   const normal = (mean, std) => randomNormal(mean, std, rng);
-  // Riesgo de pérdida total o robo en el horizonte: con probabilidad anual p, la
-  // acumulada en N años es pTL = 1 − (1 − p)^N (acotada a [0, 0.95]).
-  // En un arrendamiento no eres dueño del activo, así que el evento no cambia tu
-  // recuperación terminal (ya es 0): se desactiva para no distorsionar la cola.
+  // Risk of total loss or theft over the horizon: with annual probability p, the
+  // cumulative one over N years is pTL = 1 − (1 − p)^N (bounded to [0, 0.95]).
+  // In a lease you do not own the asset, so the event does not change your terminal
+  // recovery (already 0): it is turned off so it does not distort the tail.
   const horizonYears = clampInput('horizonYears', Math.round(positive(inputs.horizonYears, 1)));
   const pAnnual = clamp(inputs.theftLossProbAnnual, 0, 0.5);
   const isLeaseMC = inputs.purchaseMode === 'credit' && inputs.financeType === 'lease';
   const totalLossProb =
     isLeaseMC || pAnnual <= 0 ? 0 : clamp(1 - Math.pow(1 - pAnnual, horizonYears), 0, 0.95);
-  // Deducible de cobertura amplia (fracción del valor asegurado que NO te pagan).
+  // Full-coverage deductible (share of the insured value that is NOT paid out).
   const deductiblePct = clamp(
     inputs.theftDeductiblePct != null ? inputs.theftDeductiblePct : 0.05,
     0,
@@ -148,21 +148,21 @@ export function runMonteCarlo(inputs, iterations = 3000, { rng = Math.random, ye
     const c = calculate(sim, { year });
     let finalPos = c.liquidationPosition;
     let net = c.netProjectResult;
-    // ¿Hubo pérdida total en esta iteración? (sólo si eres dueño)
+    // Was there a total loss in this run? (only when owned)
     if (c.owned && totalLossProb > 0 && rng() < totalLossProb) {
-      // Pago del seguro ≈ valor asegurado depreciado en un punto representativo del
-      // horizonte (acotamos a NO superar el valor de mercado terminal, para que la
-      // pérdida total sea un RIESGO y no un premio) menos el deducible. La aseguradora
-      // liquida la deuda viva; el resto te queda. Sustituye la reventa por el pago.
+      // Insurance payout ≈ depreciated insured value at a representative point of the
+      // horizon (capped at the terminal market value, so a total loss is a RISK and not
+      // a reward) minus the deductible. The insurer pays off the remaining debt; you
+      // keep the rest. The payout replaces the resale.
       const midValue = depreciatedValue(
         c.carPrice,
         sim,
         Math.max(1, Math.round(horizonYears / 2)),
         year,
       );
-      const insuredValue = Math.min(midValue, c.valueAtEnd); // no premiar el siniestro
+      const insuredValue = Math.min(midValue, c.valueAtEnd); // do not reward the loss
       const payout = Math.max(0, insuredValue * (1 - deductiblePct));
-      const tlRecovery = payout - c.remainingDebt; // recuperación terminal bajo pérdida total
+      const tlRecovery = payout - c.remainingDebt; // terminal recovery under a total loss
       net = net - c.terminalRecovery + tlRecovery;
       finalPos = tlRecovery;
     }
@@ -211,7 +211,7 @@ export function runMonteCarlo(inputs, iterations = 3000, { rng = Math.random, ye
       p90: q(netSorted, 0.9),
       mean: netSorted.reduce((a, b) => a + b, 0) / Math.max(1, netSorted.length),
     },
-    totalLossProb, // probabilidad acumulada de pérdida total en el horizonte
+    totalLossProb, // cumulative probability of a total loss over the horizon
     hist,
     iterations,
   };

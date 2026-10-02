@@ -2,13 +2,13 @@ import { useState } from 'react';
 import { Info } from './Info.jsx';
 
 // ----------------------------------------------------------------------------
-// Field: slider más campo manual editable.
-//   - En el campo de texto se puede escribir cualquier valor, incluso fuera del
-//     rango del slider, y ese valor real es el que entra al cálculo.
-//   - El slider sirve para moverse rápido; si el valor queda fuera de su rango,
-//     el thumb se pinta en ámbar (clase out-of-range) como aviso.
-//   - `limits` ([mín, máx], opcional) acota lo que se puede escribir, para las
-//     variables que dimensionan el cálculo (ver INPUT_LIMITS).
+// Field: slider plus an editable typed entry.
+//   - The text box accepts any value, even outside the slider range, and that
+//     real value is the one the calculation uses.
+//   - The slider is for moving fast; when the value is outside its range, the
+//     thumb turns amber (out-of-range class) as a warning.
+//   - `limits` ([min, max], optional) bounds what can be typed, for the
+//     variables that size the calculation (see INPUT_LIMITS).
 // ----------------------------------------------------------------------------
 export const Field = ({
   label,

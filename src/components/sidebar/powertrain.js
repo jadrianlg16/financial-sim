@@ -4,7 +4,7 @@ export const powertrainOf = (inputs) => {
   return {
     isPlugInHybrid,
     usesElectricDrive: inputs.vehicleType === 'electric' || isPlugInHybrid,
-    // Gasolina, diésel e híbridos (incluido el enchufable) usan combustible líquido.
+    // Gasoline, diesel and hybrids (the plug-in included) use liquid fuel.
     usesLiquidFuel:
       inputs.vehicleType === 'gasoline' ||
       inputs.vehicleType === 'diesel' ||

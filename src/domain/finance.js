@@ -39,10 +39,11 @@ export function buildAmortization(principal, annualRate, months) {
   };
 }
 
-// Amortización con PAGO FINAL / GLOBO (residual): común en México (crédito con
-// valor residual). El pago mensual amortiza sólo (principal − VP del globo), de
-// modo que el saldo al final del plazo queda EXACTAMENTE en balloonAmount, que
-// se liquida en el último mes. Pagos mensuales más bajos que una anualidad pura.
+// Amortization with a FINAL / BALLOON payment (residual): common in Mexico
+// (credit with a residual value). The monthly payment amortizes only (principal −
+// PV of the balloon), so the balance at the end of the term is EXACTLY
+// balloonAmount, which is paid off in the last month. Monthly payments are lower
+// than a pure annuity.
 //   A = (P − balloon·(1+i)^−n) · i(1+i)^n / [(1+i)^n − 1]
 export function buildBalloonAmortization(principal, annualRate, months, balloonAmount) {
   if (principal <= 0 || months <= 0)
@@ -53,7 +54,7 @@ export function buildBalloonAmortization(principal, annualRate, months, balloonA
   if (r === 0) {
     payment = (principal - balloon) / months;
   } else {
-    const pvBalloon = balloon * Math.pow(1 + r, -months); // VP del globo a tasa del crédito
+    const pvBalloon = balloon * Math.pow(1 + r, -months); // PV of the balloon at the loan's rate
     payment = ((principal - pvBalloon) * r) / (1 - Math.pow(1 + r, -months));
   }
   let bal = principal;
@@ -63,7 +64,8 @@ export function buildBalloonAmortization(principal, annualRate, months, balloonA
   for (let m = 1; m <= months; m++) {
     const interest = bal * r;
     let principalPart = payment - interest;
-    // En el último mes se liquida también el globo (sale del saldo, no del pago mensual regular).
+    // In the last month the balloon is paid off too (out of the balance, not the
+    // regular monthly payment).
     const balloonThisMonth = m === months ? bal - principalPart : 0;
     principalPart += balloonThisMonth;
     bal = Math.max(0, bal - principalPart);
@@ -80,26 +82,31 @@ export function buildBalloonAmortization(principal, annualRate, months, balloonA
       balloon: balloonThisMonth,
     });
   }
-  // totalPaid = mensualidades regulares + el globo final; interés total = todo lo pagado − principal.
+  // totalPaid = regular monthly payments + the final balloon; total interest =
+  // everything paid − principal.
   const totalPaid = payment * months + balloon;
   return { payment, rows, totalPaid, totalInterest: totalPaid - principal, balloon };
 }
 
 // ============================================================================
-// INGENIERÍA ECONÓMICA  ·  VPN, TIR, CAE y CAT
+// ENGINEERING ECONOMICS  ·  VPN, TIR, CAE and CAT
 // ----------------------------------------------------------------------------
-// Estas son las ecuaciones "de verdad" para decidir entre alternativas:
-//   - VPN (NPV): trae todos los flujos a hoy con una TASA DE OPORTUNIDAD (lo que
-//     tu dinero podría ganar en otro lado, p.ej. CETES), NO la tasa del crédito.
-//   - TIR (IRR): rendimiento que iguala el VPN a cero (sirve cuando hay ingresos).
-//   - CAE (EAC): costo anual equivalente; convierte un costo en valor presente en
-//     una renta anual uniforme, para comparar autos con horizontes distintos.
-//   - CAT: tasa anual total real del crédito, incluyendo comisión de apertura.
+// These are the "real" equations for choosing between alternatives (Spanish
+// acronyms, as the UI shows them):
+//   - VPN (NPV, net present value): brings every flow to today with an
+//     OPPORTUNITY RATE (what your money could earn elsewhere, e.g. CETES,
+//     Mexican treasury bills), NOT the loan's rate.
+//   - TIR (IRR, internal rate of return): the return that makes the NPV zero
+//     (useful when there is income).
+//   - CAE (EAC, equivalent annual cost): turns a cost in present value into a
+//     uniform annual amount, to compare cars with different horizons.
+//   - CAT (Costo Anual Total): the all-in annual rate of a loan, opening fee
+//     included, that Mexican lenders must disclose.
 // ============================================================================
 export function npv(ratePerPeriod, cashflows) {
   return cashflows.reduce((acc, cf, t) => acc + cf / Math.pow(1 + ratePerPeriod, t), 0);
 }
-// TIR por bisección robusta: requiere un cambio de signo en los flujos.
+// IRR by robust bisection: needs a sign change in the flows.
 export function irr(cashflows, lo = -0.95, hi = 5) {
   const f = (r) => npv(r, cashflows);
   let flo = f(lo),
@@ -120,7 +127,7 @@ export function irr(cashflows, lo = -0.95, hi = 5) {
   }
   return (lo + hi) / 2;
 }
-// Tasa periódica que resuelve: netoRecibido = pago · [1−(1+j)^−n]/j  (para CAT).
+// Periodic rate that solves: netReceived = payment · [1−(1+j)^−n]/j  (for CAT).
 export function solvePeriodicRate(netReceived, payment, n) {
   if (netReceived <= 0 || payment <= 0 || n <= 0) return 0;
   const g = (j) =>
@@ -137,7 +144,7 @@ export function solvePeriodicRate(netReceived, payment, n) {
   }
   return (lo + hi) / 2;
 }
-// CAE: anualiza un costo expresado como valor presente, sobre N años.
+// EAC: annualizes a cost expressed as a present value, over N years.
 export function equivalentAnnualCost(pvCost, annualRate, years) {
   if (years <= 0) return pvCost;
   if (annualRate === 0) return pvCost / years;

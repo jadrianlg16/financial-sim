@@ -19,17 +19,17 @@ import { fmtMXN, fmtN, fmtPct } from '../domain/format.js';
 import { runMonteCarlo } from '../domain/monteCarlo.js';
 import { currentYear, projectionYear } from '../domain/year.js';
 
-// Número de simulaciones del rango probable: rápido y suficiente para P10/P50/P90.
+// Simulations for the likely range: fast, and enough for P10/P50/P90.
 const REPORT_MC_RUNS = 800;
 
 // ============================================================================
-// PÁGINA: REPORTE
+// PAGE: REPORTE (REPORT)
 // ----------------------------------------------------------------------------
-// El análisis completo como documento: recomendación de asesor, cifras clave,
-// financiamiento, costo total de propiedad, rango probable (Monte Carlo ligero),
-// escenarios de liquidación, supuestos, fuentes de un caso importado, notas del
-// usuario y una versión en prosa. Se imprime o guarda como PDF con el diálogo del
-// navegador y se descarga como Markdown.
+// The full analysis as a document: advisor recommendation, key figures,
+// financing, total cost of ownership, likely range (light Monte Carlo),
+// liquidation scenarios, assumptions, sources of an imported case, user notes
+// and a prose version. It prints or saves as PDF through the browser's dialog
+// and downloads as Markdown.
 // ============================================================================
 export const Report = ({ result, inputs, sources }) => {
   const car = carDisplayName(inputs);
@@ -49,7 +49,7 @@ export const Report = ({ result, inputs, sources }) => {
         : 'Combustible';
   const labels = reportLabels(result);
 
-  // Se recalcula sólo cuando cambian los inputs.
+  // Recalculated only when the inputs change.
   const mc = useMemo(() => {
     try {
       return runMonteCarlo(inputs, REPORT_MC_RUNS);
@@ -63,7 +63,7 @@ export const Report = ({ result, inputs, sources }) => {
     try {
       window.print();
     } catch {
-      /* algunos navegadores embebidos no permiten imprimir: no hay alternativa */
+      /* some embedded browsers block printing: there is no fallback */
     }
   };
 

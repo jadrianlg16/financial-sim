@@ -1,6 +1,6 @@
 import { fmtFixed, fmtMXN, fmtN, fmtPct } from '../../domain/format.js';
 
-// Costo total de propiedad por categoría y tabla resumen con todas las cifras clave.
+// Total cost of ownership by category and a summary table with every key figure.
 export const ReportTables = ({ result, inputs, yearEnd, car, vehicleLabel, breakdown }) => (
   <>
     <h2>Costo total de propiedad ({inputs.horizonYears} años)</h2>

@@ -1,10 +1,10 @@
 import { CAR_PRESETS } from './constants.js';
 import { currentYear } from './year.js';
 
-// Aplica un preset de auto a un objeto de inputs: precio, rendimiento, motor,
-// condición, año y garantía, más los ajustes típicos de un usado (reserva de
-// reparaciones, tasa). No muta: devuelve un objeto nuevo. Lo usan el panel lateral
-// y cada columna de la pestaña Comparar.
+// Applies a car preset to an inputs object: price, efficiency, powertrain,
+// condition, year and warranty, plus the typical adjustments for a used car
+// (repair reserve, rate). It does not mutate: it returns a new object. Used by
+// the sidebar and by each column of the Comparar (compare) tab.
 export function applyCarPresetTo(prev, k) {
   if (k === 'custom') return { ...prev, carPreset: 'custom' };
   const c = CAR_PRESETS[k];
@@ -23,7 +23,7 @@ export function applyCarPresetTo(prev, k) {
   next.vehicleCondition = cond;
   next.carYear = c.year || currentYear();
   next.odometerKm = c.odometerKm || 0;
-  // Los usados ya no tienen garantía de fábrica; los nuevos traen 3 años.
+  // Used cars have no factory warranty left; new ones come with 3 years.
   next.warrantyYearsRemaining = cond === 'used' ? 0 : 3;
   if (cond === 'used') {
     if (!prev.repairReserveAnnual) next.repairReserveAnnual = 6000;

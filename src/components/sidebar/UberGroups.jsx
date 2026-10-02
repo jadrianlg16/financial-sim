@@ -8,8 +8,8 @@ import { CITY_PRESETS } from '../../domain/constants.js';
 import { fmtPct } from '../../domain/format.js';
 import { TEXT_LIMITS } from '../../domain/inputSchema.js';
 
-// Operación en plataforma (ciudad, tarifa, comisión, régimen fiscal, horas) y
-// trámites únicos de alta. Sólo aparecen cuando el análisis incluye Uber.
+// Platform operation (city, fare, commission, tax regime, hours) and one-time
+// sign-up paperwork. They only appear when the analysis includes Uber.
 export const UberGroups = ({ inputs, setInputs, set, mode }) => {
   const applyCityPreset = (k) => {
     const c = CITY_PRESETS[k];

@@ -6,15 +6,15 @@ export function calculateEnergyCost(inputs, monthlyKm, yearOffset = 0) {
   const electricityInflation = Math.max(-0.95, num(inputs.electricityInflation));
   const fuelInflated = nonNegative(inputs.fuelPrice) * Math.pow(1 + fuelInflation, yearOffset);
   const dieselInflated = nonNegative(inputs.dieselPrice) * Math.pow(1 + fuelInflation, yearOffset);
-  // Carga pública vs. casera: una fracción de la energía se carga en estaciones
-  // públicas (más caras). El precio efectivo mezcla ambos y los dos siguen la misma
-  // inflación eléctrica. Sólo aplica a eléctrico o híbrido enchufable.
+  // Public vs. home charging: a share of the energy is charged at public stations
+  // (more expensive). The effective price blends both, and both follow the same
+  // electricity inflation. Only applies to electric or plug-in hybrid.
   const elecHomeInflated =
     nonNegative(inputs.electricityPrice) * Math.pow(1 + electricityInflation, yearOffset);
   const publicFrac = clamp(inputs.publicChargeFraction, 0, 1);
   const elecPublicInflated =
     nonNegative(inputs.publicChargePrice) * Math.pow(1 + electricityInflation, yearOffset);
-  const elecInflated = elecHomeInflated * (1 - publicFrac) + elecPublicInflated * publicFrac; // $/kWh efectivo
+  const elecInflated = elecHomeInflated * (1 - publicFrac) + elecPublicInflated * publicFrac; // effective $/kWh
   const kmpl = positive(inputs.kmpl, 1);
   const kmPerKwh = positive(inputs.kmPerKwh, 1);
   const chargerPowerKw = positive(inputs.chargerPowerKw, 1);

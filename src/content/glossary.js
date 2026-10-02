@@ -1,5 +1,5 @@
 export const GLOSSARY_LABELS = {
-  // Financiamiento y crédito
+  // Financing and credit
   monthlyPayment: 'Mensualidad',
   purchaseMode: 'Modo de compra',
   financeType: 'Tipo de financiamiento',
@@ -16,7 +16,7 @@ export const GLOSSARY_LABELS = {
   leaseTermMonths: 'Plazo del arrendamiento',
   leaseKmCapYear: 'Límite de km/año (arrendamiento)',
   leaseExcessKmFee: 'Cuota por km excedente',
-  // Valor del dinero e ingeniería económica
+  // Time value of money and engineering economics
   vp: 'Valor Presente (VP)',
   vf: 'Valor Futuro (VF)',
   timeValue: 'Costo del dinero',
@@ -31,7 +31,7 @@ export const GLOSSARY_LABELS = {
   liquidation: 'Resultado de liquidación',
   finalPosition: 'Resultado final',
   upfrontRecovery: 'Recuperación del desembolso inicial',
-  // Depreciación y reventa
+  // Depreciation and resale
   depreciation: 'Depreciación',
   depreciationMethod: 'Método de depreciación',
   depreciationCost: 'Costo por depreciación',
@@ -41,7 +41,7 @@ export const GLOSSARY_LABELS = {
   vehicleCondition: 'Nuevo vs. usado',
   warrantyYearsRemaining: 'Años de garantía restantes',
   repairReserve: 'Reserva de reparaciones',
-  // Costos de operación
+  // Operating costs
   monthlyTotal: 'Costo mensual total',
   costStructure: 'Estructura de costos',
   maintenance: 'Mantenimiento base',
@@ -58,13 +58,13 @@ export const GLOSSARY_LABELS = {
   cumSpend: 'Gasto acumulado',
   breakeven: 'Punto de equilibrio',
   capacity: 'Capacidad utilizada',
-  // Vehículo y energía
+  // Vehicle and energy
   vehicleType: 'Tipo de motor',
   kmPerTrip: 'Km por viaje',
   evRange: 'Autonomía eléctrica (EV)',
   publicChargeFraction: 'Fracción de carga pública',
   publicChargePrice: 'Precio de carga pública',
-  // Uber e ingreso
+  // Uber and income
   income: 'Ingreso mensual',
   uberCommission: 'Comisión Uber',
   tax: 'Impuesto sobre la tarifa',
@@ -72,7 +72,7 @@ export const GLOSSARY_LABELS = {
   resicoRate: 'Retención RESICO',
   toxicology: 'Examen toxicológico',
   certification: 'Certificación de conductor',
-  // Riesgo
+  // Risk
   theftLossProbAnnual: 'Riesgo de pérdida total / robo',
   theftDeductiblePct: 'Deducible de cobertura amplia',
 };

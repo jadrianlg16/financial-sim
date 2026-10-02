@@ -3,8 +3,8 @@ import { Field } from '../ui/Field.jsx';
 import { Group } from '../ui/Group.jsx';
 import { Segmented } from '../ui/Segmented.jsx';
 
-// Objetivo del análisis: que el auto se pague solo con Uber, ganar una cantidad
-// al mes, o sólo conocer el costo de tenerlo.
+// Goal of the analysis: make the car pay for itself with Uber, earn an amount
+// per month, or just learn what owning it costs.
 export const GoalGroup = ({ inputs, set }) => {
   return (
     <>

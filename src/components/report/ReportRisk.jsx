@@ -1,7 +1,7 @@
 import { fmtFixed, fmtMXN, fmtN, fmtPct } from '../../domain/format.js';
 
-// Rango probable: el caso base rodeado de una simulación Monte Carlo ligera
-// (optimista P10, probable P50, pesimista P90).
+// Likely range: the base case surrounded by a light Monte Carlo simulation
+// (optimistic P10, likely P50, pessimistic P90).
 export const ReportRisk = ({ result, mc, mcRuns }) => (
   <>
     {mc && (

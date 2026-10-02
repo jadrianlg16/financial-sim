@@ -27,7 +27,7 @@ export const SOURCE_LABELS = {
   sellingCostPct: 'Costo de venta',
   interestRate: 'Tasa de crédito',
   acquisitionFees: 'Gastos de adquisición',
-  // Régimen fiscal, financiamiento, seguro y riesgo
+  // Tax regime, financing, insurance and risk
   insuranceMode: 'Modo de seguro',
   insurancePctOfValue: 'Seguro (% del valor)',
   taxRegime: 'Régimen fiscal Uber',
@@ -36,7 +36,7 @@ export const SOURCE_LABELS = {
   balloonPct: 'Valor residual (globo)',
   leaseMonthly: 'Renta de arrendamiento',
   leaseDownPayment: 'Pago inicial arrendamiento',
-  // NUEVOS: depreciación de usados, garantía, carga pública, pérdida total
+  // Used-car depreciation, warranty, public charging, total loss
   usedDepreciationRate: 'Depreciación de usados',
   warrantyYearsRemaining: 'Garantía restante',
   publicChargeFraction: 'Fracción de carga pública',

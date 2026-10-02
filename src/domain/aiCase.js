@@ -9,11 +9,11 @@ import {
 import { currentYear } from './year.js';
 
 /**
- * Prompt que pide a un LLM investigar un auto y devolver un JSON con un esquema
- * fijo que cubre todas las variables, con una fuente por dato en "sources"
- * (fabricante, AMDA, INEGI, Profeco, CFE, aseguradoras, Uber MX...). Las
- * estimaciones se marcan [ESTIMACIÓN] para que el usuario pueda verificar cada
- * cifra en lugar de confiar en el modelo. `year` es el año de ejemplo del esquema.
+ * Prompt that asks an LLM to research a car and return JSON with a fixed schema
+ * covering every variable, with one source per figure in "sources" (maker, AMDA,
+ * INEGI, Profeco, CFE, insurers, Uber MX...). Estimates are marked [ESTIMACIÓN]
+ * so the user can check each figure instead of trusting the model. `year` is the
+ * schema's example year.
  */
 export function buildAIPrompt(carName, year = currentYear()) {
   return `Eres un investigador financiero. Necesito datos VERIFICADOS y con FUENTE para evaluar la viabilidad de un auto en plataforma Uber en México.
@@ -130,10 +130,10 @@ Notas técnicas:
 Recuerda: SOLO el JSON, con una fuente por cada dato en "sources".`;
 }
 
-// Campos que se aceptan del JSON: [sección, llave en el JSON, input, tipo]. Los
-// números deben ser finitos (y dentro de INPUT_LIMITS), los textos no vacíos y
-// las opciones de OPTIONS: un valor desconocido se ignora en vez de colarse al
-// modelo (p. ej. un tipo de motor desconocido daría costo de energía 0).
+// Fields accepted from the JSON: [section, key in the JSON, input, type]. Numbers
+// must be finite (and within INPUT_LIMITS), strings non-empty and options from
+// OPTIONS: an unknown value is ignored rather than slipping into the model (e.g.
+// an unknown powertrain would give an energy cost of 0).
 const IMPORT_FIELDS = [
   ['vehicle', 'name', 'carName', 'text'],
   ['vehicle', 'type', 'vehicleType', 'option'],
@@ -190,7 +190,7 @@ const IMPORT_FIELDS = [
 ];
 const SECTIONS = ['vehicle', 'costs', 'oneTime', 'uber', 'financing', 'projection'];
 
-// Convierte un valor del JSON al tipo del input; undefined si no es válido.
+// Converts a JSON value to the input's type; undefined when it is not valid.
 const coerce = (kind, input, value) => {
   if (kind === 'boolean') return !!value;
   if (kind === 'text') return typeof value === 'string' && value ? value : undefined;
@@ -240,8 +240,8 @@ export function applyImportedJson(json, currentInputs) {
   const vehicle = sectionOf('vehicle');
   if (vehicle) {
     merged.carPreset = 'custom';
-    // Sin garantía en el JSON, se infiere de la condición (usado 0 años, nuevo 3),
-    // igual que al elegir un preset.
+    // With no warranty in the JSON, it follows from the condition (used 0 years, new
+    // 3), the same as picking a preset.
     if (vehicle.warrantyYearsRemaining == null) {
       if (vehicle.condition === 'used') merged.warrantyYearsRemaining = 0;
       else if (vehicle.condition === 'new') merged.warrantyYearsRemaining = 3;
@@ -268,7 +268,7 @@ export const stripCodeFences = (text) =>
     .replace(/```\s*$/g, '')
     .trim();
 
-// Una respuesta normal del LLM pesa unos pocos KB; esto deja margen de sobra.
+// A normal LLM answer weighs a few KB; this leaves plenty of room.
 export const MAX_IMPORT_CHARS = 100000;
 
 /**

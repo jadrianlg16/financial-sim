@@ -7,8 +7,8 @@ import { TIPS } from '../../content/tips.js';
 import { fmtPct } from '../../domain/format.js';
 import { powertrainOf } from './powertrain.js';
 
-// Uso personal y desgaste, y costos recurrentes: energía según el motor, seguro,
-// mantenimiento, refrendo y otros gastos mensuales.
+// Personal use and wear, and recurring costs: energy for the powertrain,
+// insurance, maintenance, refrendo (annual registration) and other monthly costs.
 export const CostGroups = ({ inputs, set, mode }) => {
   const { usesElectricDrive, usesLiquidFuel } = powertrainOf(inputs);
   return (

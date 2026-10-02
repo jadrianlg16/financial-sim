@@ -1,8 +1,8 @@
-// Estilos que sólo aplican al reporte.
+// Styles that only apply to the report.
 
-// Impresión: oculta el resto de la app, lleva la columna principal a ancho
-// completo, quita el fondo y evita cortar tablas y KPIs entre páginas, para que
-// "Guardar como PDF" desde el diálogo del navegador produzca un documento limpio.
+// Print: hides the rest of the app, takes the main column to full width, drops
+// the background and avoids splitting tables and KPIs across pages, so "Guardar
+// como PDF" (save as PDF) from the browser dialog produces a clean document.
 export const PRINT_CSS = `
     @media print {
       .sidebar, .tabs { display:none !important; }
@@ -19,9 +19,9 @@ export const PRINT_CSS = `
     }
   `;
 
-// Pantallas angostas (menos de 700px), sólo dentro de .report-body: menos padding
-// (gana al estilo en línea con !important), tablas anchas con scroll horizontal y
-// títulos más chicos.
+// Narrow screens (under 700px), only inside .report-body: less padding (beats
+// the inline style with !important), wide tables scroll horizontally and
+// headings are smaller.
 export const RESPONSIVE_CSS = `
     @media (max-width:700px) {
       .report-body { padding:20px 14px !important; }

@@ -12,15 +12,16 @@ import { fmtMXN, num } from '../domain/format.js';
 import { projectionYear } from '../domain/year.js';
 
 // ============================================================================
-// PÁGINA: COMPARAR
+// PAGE: COMPARAR (COMPARE)
 // ----------------------------------------------------------------------------
-// De dos a cuatro autos editables lado a lado, cada uno con su propio calculate()
-// en vivo, más los escenarios guardados como columnas de sólo lectura. Abajo se
-// decide con un veredicto (CAE y $/km), una tabla que resalta el mejor valor de
-// cada fila de costo y la posición acumulada por año (incluye venta − deuda).
+// Two to four editable cars side by side, each with its own live calculate(),
+// plus the saved scenarios as read-only columns. Below, the decision: a verdict
+// (CAE, the equivalent annual cost, and $/km), a table that highlights the best
+// value of each cost row, and the cumulative position per year (including sale
+// minus debt).
 // ============================================================================
 export const Comparison = ({ saved, currentInputs, setSaved }) => {
-  // Cada auto editable = { id, inputs }. Semilla: 2 copias profundas del sidebar actual.
+  // Each editable car = { id, inputs }. Seed: 2 deep copies of the current sidebar.
   const [cars, setCars] = useState(() =>
     ['c0', 'c1'].map((id) => ({ id, inputs: cloneInputs(currentInputs) })),
   );
@@ -43,7 +44,7 @@ export const Comparison = ({ saved, currentInputs, setSaved }) => {
   const loadCurrentAsCar = () =>
     setCars((cs) => (cs.length >= MAX_COMPARE_CARS ? cs : [...cs, mkCar(currentInputs)]));
 
-  // Recalcular en vivo por columna + asignar color por índice. (useMemo sobre cars)
+  // Recalculate each column live and assign a color by index (useMemo over cars).
   const computed = useMemo(
     () =>
       cars.map((c, i) => ({
@@ -56,8 +57,9 @@ export const Comparison = ({ saved, currentInputs, setSaved }) => {
     [cars],
   );
 
-  // Columnas de comparación = autos editables + escenarios guardados (sólo lectura).
-  // sid único por serie para que la gráfica nunca se pise (incluso con nombres repetidos).
+  // Comparison columns = editable cars + saved scenarios (read-only). Each series
+  // gets a unique sid so chart lines never overwrite each other (even with
+  // repeated names).
   const savedCols = (saved || []).map((s, i) => ({
     id: `sv${i}`,
     inputs: s.inputs,
@@ -72,7 +74,7 @@ export const Comparison = ({ saved, currentInputs, setSaved }) => {
   const anyUber = cols.some((c) => c.result.isUberMode);
   const yearsMax = Math.max(1, ...cols.map((c) => num(c.result.cashflow?.length, 1)));
 
-  // Posición acumulada por año (venta − deuda incluida), keyed por sid único.
+  // Cumulative position per year (sale − debt included), keyed by the unique sid.
   const lineData = [];
   for (let y = 1; y <= yearsMax; y++) {
     const row = { year: projectionYear(y) };
@@ -83,7 +85,7 @@ export const Comparison = ({ saved, currentInputs, setSaved }) => {
     lineData.push(row);
   }
 
-  // Mejor por CAE (menor) y por $/km (menor, ignorando NaN). Ambos sobre TODAS las columnas.
+  // Best by CAE (lowest) and by $/km (lowest, ignoring NaN), both over ALL columns.
   const bestEac = cols.reduce(
     (b, c) => (!b || (isFinite(c.result.eac) && c.result.eac < b.result.eac) ? c : b),
     null,
@@ -93,7 +95,7 @@ export const Comparison = ({ saved, currentInputs, setSaved }) => {
     .reduce((b, c) => (!b || c.result.costPerKm < b.result.costPerKm ? c : b), null);
   const eacKmAgree = bestEac && bestPerKm && bestEac.sid === bestPerKm.sid;
 
-  // Para resaltar el mejor (mínimo) por fila de costo: id de la columna con el menor valor finito.
+  // To highlight the best (lowest) cost per row: id of the column with the lowest finite value.
   const bestSidFor = (accessor) => {
     let best = null,
       bestVal = Infinity;
@@ -121,7 +123,7 @@ export const Comparison = ({ saved, currentInputs, setSaved }) => {
     },
     { label: 'CAE/año', get: (r) => r.eac, fmt: (r) => fmtMXN(r.eac), strong: true },
   ];
-  // Reventa: aquí MÁS es mejor, así que no se resalta como mínimo (sin best).
+  // Resale: here MORE is better, so it is not highlighted as a minimum (no best).
   const plainRows = [{ label: 'Reventa esperada', fmt: (r) => fmtMXN(r.actualSalePrice) }];
 
   return (

@@ -3,11 +3,11 @@ import { Info } from './ui/Info.jsx';
 import { fmtMXN, fmtPct } from '../domain/format.js';
 
 // ============================================================================
-// BLOQUE: IMPACTO EN EL INGRESO
+// BLOCK: IMPACT ON INCOME
 // ----------------------------------------------------------------------------
-// Qué parte del ingreso mensual se lleva el auto, en total y por categoría, con
-// un semáforo según la regla común del 20–30% del ingreso. El ingreso es
-// opcional: si no se captura (monthlyIncome <= 0) el bloque no se muestra.
+// How much of the monthly income the car takes, in total and by category, with a
+// traffic light based on the common 20–30% of income rule. Income is optional:
+// when it is not entered (monthlyIncome <= 0) the block is not shown.
 // ============================================================================
 export const IncomeImpact = ({ result, inputs }) => {
   if (!inputs.monthlyIncome || inputs.monthlyIncome <= 0) return null;

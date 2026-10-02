@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { HelpCircle } from 'lucide-react';
 
-// Tooltip "?" accesible también en pantallas táctiles. En escritorio funciona con
-// el :hover del CSS; un toque alterna `open` y fuerza la visibilidad con estilo en
-// línea. Se cierra al perder el foco o con un segundo toque; stopPropagation evita
-// disparar el handler del elemento padre (p. ej. el encabezado de un grupo).
+// "?" tooltip that also works on touch screens. On desktop it runs on the CSS
+// :hover; a tap toggles `open` and forces visibility with an inline style. It
+// closes on blur or a second tap; stopPropagation keeps the tap from firing the
+// parent's handler (e.g. a group header).
 export const Info = ({ text }) => {
   const [open, setOpen] = useState(false);
   const toggle = (e) => {

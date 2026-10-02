@@ -10,13 +10,13 @@ import { Segmented } from './ui/Segmented.jsx';
 import { readSidebarMode, SIDEBAR_MODE_KEY } from '../storage/persistence.js';
 
 // ============================================================================
-// PANEL LATERAL
+// SIDEBAR
 // ----------------------------------------------------------------------------
-// Captura todas las variables del escenario, agrupadas por tema (sidebar/*).
-// Cada campo numérico combina slider y entrada manual (ui/Field): el valor
-// escrito puede salir del rango del slider y es el que entra al cálculo.
-// El modo Básico muestra lo esencial para una primera decisión; Avanzado, todas
-// las variables. La preferencia se guarda en localStorage.
+// Captures every variable of the scenario, grouped by topic (sidebar/*). Each
+// numeric field combines a slider and a typed entry (ui/Field): the typed value
+// may go past the slider's range and is the one the calculation uses. Básico
+// (basic) mode shows the essentials for a first decision; Avanzado (advanced),
+// every variable. The preference is saved in localStorage.
 // ============================================================================
 export const Sidebar = ({ inputs, setInputs, onReset, onSave }) => {
   const [mode, setMode] = useState(readSidebarMode);
@@ -25,12 +25,12 @@ export const Sidebar = ({ inputs, setInputs, onReset, onSave }) => {
     try {
       localStorage.setItem(SIDEBAR_MODE_KEY, m);
     } catch {
-      /* almacenamiento no disponible: el modo sólo dura esta sesión */
+      /* storage unavailable: the mode only lasts this session */
     }
   };
-  // Borrar todo pide un segundo clic en un botón distinto. Es una confirmación en la
-  // página y no window.confirm(), que los iframes con sandbox (el portafolio)
-  // bloquean; también evita que un solo clic engañado borre los datos.
+  // Deleting everything takes a second click on a different button. It is an
+  // in-page confirmation rather than window.confirm(), which sandboxed iframes
+  // (the portfolio) block; it also keeps a single tricked click from wiping data.
   const [confirmingReset, setConfirmingReset] = useState(false);
   const set = (k, v) => setInputs((prev) => ({ ...prev, [k]: v }));
   const groupProps = { inputs, setInputs, set, mode };

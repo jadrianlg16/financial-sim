@@ -14,13 +14,13 @@ const VARIATION_GROUPS = [
 ];
 
 // ============================================================================
-// PÁGINA: MONTE CARLO
+// PAGE: MONTE CARLO
 // ----------------------------------------------------------------------------
-// Repite el cálculo miles de veces variando al azar los valores inciertos para
-// estimar la probabilidad de que el plan funcione. Muestra P10/P50/P90 de viajes,
-// liquidación y resultado neto, y el histograma del punto de equilibrio. La lista
-// en pantalla de lo que varía sale de MC_VARIATIONS, la misma tabla que usa
-// runMonteCarlo(), así que no puede quedar desactualizada.
+// Repeats the calculation thousands of times with the uncertain values varied at
+// random to estimate the probability that the plan works. Shows P10/P50/P90 of
+// trips, liquidation and net result, and the break-even histogram. The on-screen
+// list of what varies comes from MC_VARIATIONS, the same table runMonteCarlo()
+// uses, so it cannot go stale.
 // ============================================================================
 export const MonteCarlo = ({ inputs }) => {
   const [results, setResults] = useState(null);

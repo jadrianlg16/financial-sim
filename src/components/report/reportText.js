@@ -350,7 +350,7 @@ export function buildMarkdown(result, inputs, ctx) {
     result.totalRepairReserve > 0
       ? `- Reserva de reparaciones acumulada en el horizonte: ${fmtMXN(result.totalRepairReserve)}.\n`
       : '';
-  // Las notas son texto libre: van en un bloque de código para que se lean tal cual.
+  // The notes are free text: they go in a code block so they read as typed.
   const userNotes = inputs.userNotes && inputs.userNotes.trim();
   const fence = userNotes ? fenceFor(userNotes) : '';
   const notes = userNotes

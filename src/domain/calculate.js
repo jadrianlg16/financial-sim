@@ -13,26 +13,28 @@ import { clampInput } from './inputSchema.js';
 import { currentYear, projectionYear } from './year.js';
 
 // ============================================================================
-// MOTOR DE CÁLCULO
+// CALCULATION ENGINE
 // ----------------------------------------------------------------------------
-// calculate() convierte un objeto de inputs en el resultado completo que leen
-// todas las pestañas. Corre en etapas con nombre; cada una recibe sólo lo que
-// necesita de las anteriores:
-//   1. financingStage     enganche, monto financiado, crédito/globo/arrendamiento, VP/VF
-//   2. operatingCostStage costos por km (energía, mantenimiento), fijos mensuales, desembolso día 1
-//   3. liquidationStage   valor de venta al horizonte menos deuda viva
-//   4. breakEvenStage     contribución neta por viaje y viajes/mes para cubrir el plan
-//   5. usageStage         km, energía y mantenimiento que implican esos viajes
-//   6. feasibilityStage   horas, viajes/hora, autonomía y carga del EV
-//   7. cashflowStage      flujo año por año con inflación, reparaciones y totales
-//   8. economicsStage     VPN, TIR, CAE, TCO, CAT y financiar vs. contado
+// calculate() turns an inputs object into the full result every tab reads. It
+// runs in named stages; each one receives only what it needs from the earlier
+// ones:
+//   1. financingStage     down payment, amount financed, loan/balloon/lease, PV/FV
+//   2. operatingCostStage per-km costs (energy, maintenance), monthly fixed costs, day-one cash
+//   3. liquidationStage   sale value at the horizon minus the remaining debt
+//   4. breakEvenStage     net contribution per trip and trips/month to cover the plan
+//   5. usageStage         km, energy and maintenance those trips imply
+//   6. feasibilityStage   hours, trips/hour, the EV's range and charging
+//   7. cashflowStage      year-by-year flow with inflation, repairs and totals
+//   8. economicsStage     VPN (NPV), TIR (IRR), CAE (EAC), TCO, CAT and finance vs. cash
+// VPN, TIR and CAE are the Spanish names of NPV, IRR and EAC; CAT (Costo Anual
+// Total) is the all-in annual cost of a loan that Mexican lenders must disclose.
 // ============================================================================
 
-// Supuesto de km anuales con el que se reparte el mantenimiento base por km.
+// Assumed annual km used to spread the base maintenance cost per km.
 const ASSUMED_BASE_KM_YEAR = 20000;
-// Km de referencia para obtener el costo de energía por km promediado en el horizonte.
+// Reference km used to average the energy cost per km over the horizon.
 const REF_KM = 1000;
-// Fracción utilizable de la batería (margen para no operar al 0–100%).
+// Usable share of the battery (a margin so it never runs 0–100%).
 const USABLE_BATTERY_FRACTION = 0.9;
 
 /** Horizon, purchase split, loan or lease terms and the credit's present/future value. */
@@ -41,21 +43,21 @@ function financingStage(inputs) {
   // Horizon and terms are clamped to INPUT_LIMITS: they size the loops below.
   const years = clampInput('horizonYears', Math.round(positive(inputs.horizonYears, 1)));
   const horizonMonths = years * 12;
-  // Auto a cuenta (trade-in): actúa como enganche adicional, reduce lo financiado.
+  // Trade-in (auto a cuenta): works as an extra down payment, reducing the amount financed.
   const tradeInValue = Math.min(nonNegative(inputs.tradeInValue), carPrice);
-  // Globo y arrendamiento sólo existen en compra a crédito; en efectivo o mixto lo
-  // financiado (si hay) es siempre una anualidad.
+  // Balloon and lease only exist for a credit purchase; with cash or a mix, the
+  // amount financed (if any) is always an annuity.
   const financeType =
     inputs.purchaseMode === 'credit' ? inputs.financeType || 'annuity' : 'annuity';
   const isLease = financeType === 'lease';
   const isBalloon = financeType === 'balloon';
-  // En arrendamiento NO eres dueño: no hay activo que financiar ni que revender.
+  // A lease is NOT ownership: there is no asset to finance or resell.
   const owned = !isLease;
 
   let cashPaid, financed;
   if (isLease) {
-    // El desembolso inicial es el pago inicial del arrendamiento (no recuperable);
-    // el trade-in no aplica.
+    // The day-one cash is the lease's upfront payment (not recoverable); the trade-in
+    // does not apply.
     cashPaid = nonNegative(inputs.leaseDownPayment);
     financed = 0;
   } else if (inputs.purchaseMode === 'cash') {
@@ -73,13 +75,13 @@ function financingStage(inputs) {
   }
 
   const interestRate = Math.max(-0.95, num(inputs.interestRate));
-  // Plazo: en arrendamiento, el del contrato; en crédito, el del préstamo.
+  // Term: for a lease, the contract's; for credit, the loan's.
   const months = isLease
     ? clampInput('leaseTermMonths', Math.round(positive(inputs.leaseTermMonths, 1)))
     : financed > 0
       ? clampInput('loanMonths', Math.round(positive(inputs.loanMonths, 1)))
       : 0;
-  // Globo: fracción de lo financiado que no se amortiza y se paga al final.
+  // Balloon: share of the amount financed that is not amortized and is paid at the end.
   const balloonPct = isBalloon ? clamp(inputs.balloonPct, 0, 0.9) : 0;
   const balloonAmount = isBalloon ? financed * balloonPct : 0;
   const amort =
@@ -88,20 +90,20 @@ function financingStage(inputs) {
       : buildAmortization(financed, interestRate, months);
   const balloonPayment = amort.balloon || 0;
 
-  // Mensualidad mostrada: en arrendamiento es la renta; si no, la del crédito.
+  // Monthly payment shown: the rent for a lease; otherwise the loan's payment.
   const leaseMonthly = nonNegative(inputs.leaseMonthly);
   const monthlyPayment = isLease ? leaseMonthly : amort.payment;
   const totalInterest = amort.totalInterest;
   const openingFee = financed * nonNegative(inputs.openingFeePct);
 
   const r = interestRate / 12;
-  // VP de los pagos a la propia tasa del crédito; el globo entra como flujo único al final.
+  // PV of the payments at the loan's own rate; the balloon enters as a single flow at the end.
   const pvOfPayments =
     financed > 0
       ? (r === 0 ? amort.payment * months : (amort.payment * (1 - Math.pow(1 + r, -months))) / r) +
         (isBalloon ? balloonAmount * Math.pow(1 + r, -months) : 0)
       : 0;
-  // En arrendamiento, VP y VF se basan en las rentas dentro del horizonte más el pago inicial.
+  // For a lease, PV and FV are based on the rents within the horizon plus the upfront payment.
   const leasePvPayments = isLease
     ? r === 0
       ? leaseMonthly * Math.min(months, horizonMonths)
@@ -151,25 +153,25 @@ function operatingCostStage(
   { carPrice, years, cashPaid, openingFee, isUberMode, asOfYear },
 ) {
   const personalKm = nonNegative(inputs.personalKmDaily);
-  // Km recorridos por viaje, incluidos los traslados vacíos para recoger al pasajero.
+  // Km driven per trip, including the empty legs to pick up the passenger.
   const kmPerTrip = positive(inputs.uberKmPerTrip, 1);
   const personalMonthlyKm = personalKm * 30;
 
-  // Energía por km promediada en el horizonte para incorporar la inflación de
-  // combustible/electricidad; se calcula con un kilometraje de referencia.
+  // Energy per km averaged over the horizon to include fuel/electricity inflation;
+  // it is computed with a reference mileage.
   let refEnergyOverHorizon = 0;
   for (let y = 0; y < years; y++)
     refEnergyOverHorizon += calculateEnergyCost(inputs, REF_KM, y).cost;
   const energyCostPerKm = refEnergyOverHorizon / years / REF_KM;
 
-  // El mantenimiento base se reparte por km; cada km de Uber cuesta además el
-  // factor de desgaste extra.
+  // The base maintenance is spread per km; each Uber km also costs the extra wear factor.
   const maintCostPerKm = nonNegative(inputs.annualMaintenance) / ASSUMED_BASE_KM_YEAR;
   const maintCostPerUberKm = maintCostPerKm * (1 + nonNegative(inputs.uberWearFactor));
 
-  // Seguro: monto fijo, o % anual del valor depreciado al inicio de cada año
-  // (baja conforme el auto se deprecia). insuranceAnnualForYear(y) da la prima del
-  // año y = 1..N; el año 1 es el valor mensual que ven los KPIs y el break-even.
+  // Insurance: a fixed amount, or an annual % of the depreciated value at the start
+  // of each year (it drops as the car depreciates). insuranceAnnualForYear(y) gives
+  // the premium for year y = 1..N; year 1 is the monthly value the KPIs and the
+  // break-even use.
   const insuranceMode = inputs.insuranceMode === 'pctOfValue' ? 'pctOfValue' : 'fixed';
   const insurancePctOfValue = clamp(inputs.insurancePctOfValue, 0, 0.3);
   const insuranceAnnualForYear = (y) => {
@@ -178,8 +180,8 @@ function operatingCostStage(
   };
   const monthlyIns = insuranceAnnualForYear(1) / 12;
   const monthlyRefrendo = nonNegative(inputs.monthlyRefrendo);
-  // Datos, propinas y accesorios sólo existen al manejar en Uber; el lavado de uso
-  // personal se estima en 40% del de un auto de plataforma.
+  // Data plan, tips and accessories only exist when driving for Uber; washing for
+  // personal use is estimated at 40% of a platform car's.
   const monthlyData = isUberMode ? nonNegative(inputs.dataPlan) : 0;
   const monthlyCarWash = isUberMode
     ? nonNegative(inputs.carWash)
@@ -188,7 +190,7 @@ function operatingCostStage(
   const monthlyMisc = nonNegative(inputs.miscellaneous);
   const monthlyAccess = isUberMode ? nonNegative(inputs.accessories) : 0;
 
-  // La energía y el mantenimiento de los km personales no dependen de los viajes.
+  // Energy and maintenance for the personal km do not depend on the trips.
   const personalEnergyMonthly = personalMonthlyKm * energyCostPerKm;
   const personalMaintMonthly = personalMonthlyKm * maintCostPerKm;
 
@@ -206,7 +208,7 @@ function operatingCostStage(
   const oneTimeUberCosts = isUberMode
     ? nonNegative(inputs.toxicologyReport) + nonNegative(inputs.uberCertification)
     : 0;
-  // Gastos de adquisición pagados una vez: placas/alta, ISAN, revisión, traspaso.
+  // One-time purchase costs: plates/registration, ISAN (new-car tax), inspection, title transfer.
   const acquisitionFees = nonNegative(inputs.acquisitionFees);
   const upfrontCash = cashPaid + openingFee + oneTimeUberCosts + acquisitionFees;
 
@@ -239,22 +241,23 @@ function liquidationStage(
   inputs,
   { carPrice, years, horizonMonths, months, owned, isLease, amort, asOfYear },
 ) {
-  // Sin propiedad (arrendamiento) no hay valor de reventa que recuperar.
+  // Without ownership (lease) there is no resale value to recover.
   const valueAtEnd = owned ? depreciatedValue(carPrice, inputs, years, asOfYear) : 0;
   const grossSalePrice = owned ? valueAtEnd * nonNegative(inputs.salesFactor) : 0;
-  // Costo de venta al liquidar (comisión de agencia, trámite de traspaso).
+  // Cost of selling at liquidation (dealer commission, title transfer).
   const sellingCostPct = clamp(inputs.sellingCostPct, 0, 0.5);
   const actualSalePrice = owned ? grossSalePrice * (1 - sellingCostPct) : 0;
   const monthAtEnd = Math.min(horizonMonths, months);
-  // Deuda viva al horizonte. En un crédito con globo el saldo de la fila ya incluye
-  // el residual: si el horizonte alcanza el plazo se liquida (saldo 0); si no, queda.
+  // Debt still owed at the horizon. In a balloon loan the row's balance already
+  // includes the residual: if the horizon reaches the term it is paid off (balance
+  // 0); otherwise it remains.
   const remainingDebt =
     isLease || horizonMonths >= months || months === 0
       ? 0
       : amort.rows[monthAtEnd - 1]
         ? amort.rows[monthAtEnd - 1].balance
         : 0;
-  // Lo que realmente recuperas al final: venta neta menos deuda viva.
+  // What you actually recover at the end: net sale minus remaining debt.
   const terminalRecovery = isLease ? 0 : actualSalePrice - remainingDebt;
 
   return {
@@ -294,10 +297,11 @@ function breakEvenStage(
   const platformCommission = grossPerTrip * uberCommissionRate;
   const variableCostPerTrip = (energyCostPerKm + maintCostPerUberKm) * kmPerTrip;
 
-  // Impuesto por viaje según el régimen:
-  //   'resico' (default) retención de plataforma: resicoRate × tarifa bruta.
-  //   'gross'  taxRate × tarifa bruta (supuesto simplificado; sobreestima el impuesto).
-  //   'net'    taxRate × utilidad del viaje (tarifa − comisión − costo variable), nunca negativa.
+  // Tax per trip by regime:
+  //   'resico' (default) platform withholding under RESICO, Mexico's simplified
+  //                      regime: resicoRate × gross fare.
+  //   'gross'  taxRate × gross fare (simplified assumption; overstates the tax).
+  //   'net'    taxRate × trip profit (fare − commission − variable cost), never negative.
   const taxRegime = inputs.taxRegime || 'resico';
   const resicoRate = clamp(inputs.resicoRate, 0, 0.2);
   let taxAmountPerTrip;
@@ -313,8 +317,8 @@ function breakEvenStage(
   const netRevenuePerTrip = grossPerTrip - platformCommission - taxAmountPerTrip;
   const netContributionPerTrip = netRevenuePerTrip - variableCostPerTrip;
 
-  // Para que el proyecto completo se pague solo, Uber debe generar durante el
-  // horizonte la parte del desembolso inicial que la venta final (menos deuda) no cubre.
+  // For the whole project to pay for itself, Uber must generate over the horizon
+  // the part of the day-one cash that the final sale (minus debt) does not cover.
   const projectRecoveryBase = isUberMode ? Math.max(0, upfrontCash - terminalRecovery) : 0;
   const projectRecoveryMonthly = projectRecoveryBase / horizonMonths;
 
@@ -326,7 +330,7 @@ function breakEvenStage(
     isUberMode && netContributionPerTrip > 0
       ? operatingFixedMonthlyCosts / netContributionPerTrip
       : 0;
-  // Si cada viaje pierde dinero, ningún número de viajes cubre los costos.
+  // If every trip loses money, no number of trips covers the costs.
   const breakEvenTrips = isUberMode
     ? netContributionPerTrip > 0
       ? fixedMonthlyCosts / netContributionPerTrip
@@ -386,13 +390,13 @@ function usageStage(
   const totalDailyKm = monthlyKm / 30;
   const uberKm = uberMonthlyKm / 30;
 
-  // Energía mensual de esos km, año por año con su inflación.
+  // Monthly energy for those km, year by year with its inflation.
   const energyByYear = [];
   for (let y = 0; y < years; y++) energyByYear.push(calculateEnergyCost(inputs, monthlyKm, y));
   const yearOneEnergy = energyByYear[0] || { cost: 0, chargingTimePerDay: 0 };
   const avgMonthlyEnergy = energyByYear.reduce((a, e) => a + e.cost, 0) / years;
 
-  // Mantenimiento de los km personales más los de Uber con su desgaste extra.
+  // Maintenance of the personal km plus the Uber km with their extra wear.
   const effectiveMaintenance =
     (personalMonthlyKm * maintCostPerKm + uberMonthlyKm * maintCostPerUberKm) * 12;
   const wearMultiplier =
@@ -447,14 +451,14 @@ function feasibilityStage(
     fixedMonthlyCosts,
   },
 ) {
-  // ¿Caben los km diarios en una carga útil de la batería? Si no, habría que
-  // recargar a mitad de la jornada y el plan no se marca viable.
+  // Do the daily km fit in one usable battery charge? If not, the driver would have
+  // to recharge mid-shift and the plan is not marked viable.
   const isEV = inputs.vehicleType === 'electric';
   const usableKwh = nonNegative(inputs.batteryCapacityKwh) * USABLE_BATTERY_FRACTION;
   const dailyRangeKm = isEV ? usableKwh * positive(inputs.kmPerKwh, 1) : Infinity;
   const evRangeShortfall = isEV && totalDailyKm > dailyRangeKm;
 
-  // El tiempo de carga se descuenta de las horas disponibles para manejar.
+  // Charging time is taken out of the hours available for driving.
   const chargingHoursPerDay = yearOneEnergy.chargingTimePerDay || 0;
   const maxHoursPerDay = nonNegative(inputs.maxHoursPerDay);
   const effectiveMaxHoursPerDay = Math.max(0, maxHoursPerDay - chargingHoursPerDay);
@@ -468,13 +472,13 @@ function feasibilityStage(
   const hoursPerWeek = weeklyDays * hoursPerDay;
 
   const capacityUsage = isUberMode && maxTripsMonth > 0 ? breakEvenTrips / maxTripsMonth : 0;
-  // Más de 4 viajes por hora no es realista en ciudad.
+  // More than 4 trips per hour is not realistic in a city.
   const tripsPerHourWarn = tripsPerHour > 4;
   const chargingExceedsAvailableHours = chargingHoursPerDay > maxHoursPerDay;
   const feasible =
     !isUberMode ||
     (Number.isFinite(breakEvenTrips) &&
-      // Sin horas o viajes disponibles no es viable (evita un capacityUsage = 0 engañoso).
+      // With no hours or trips available it is not viable (avoids a misleading capacityUsage = 0).
       maxTripsMonth > 0 &&
       capacityUsage <= 1 &&
       netContributionPerTrip > 0 &&
@@ -544,11 +548,12 @@ function cashflowStage(inputs, ctx) {
     monthlyMaint,
   } = ctx;
 
-  // Inflación general de costos no energéticos (refrendo, mantenimiento, otros).
+  // General inflation of non-energy costs (refrendo, the annual registration fee;
+  // maintenance; other).
   const generalInflation = Math.max(-0.5, num(inputs.generalInflation));
-  // Reserva de reparaciones que crece con la edad del auto (clave en usados). Dentro
-  // de la garantía (año y ≤ warrantyYearsRemaining) las reparaciones mayores las cubre
-  // el fabricante y la reserva de ese año es 0.
+  // Repair reserve that grows with the car's age (key for used cars). Within the
+  // warranty (year y ≤ warrantyYearsRemaining) the maker covers major repairs and
+  // that year's reserve is 0.
   const baseAgeYears = Math.max(0, asOfYear - num(inputs.carYear, asOfYear));
   const repairBase = nonNegative(inputs.repairReserveAnnual);
   const repairGrowth = nonNegative(inputs.repairGrowth != null ? inputs.repairGrowth : 0.15);
@@ -558,14 +563,14 @@ function cashflowStage(inputs, ctx) {
       ? 0
       : repairBase * Math.pow(1 + repairGrowth, baseAgeYears + (y - 1));
 
-  // Meses del año y cubiertos por el plazo del crédito o del arrendamiento.
+  // Months of year y covered by the loan or lease term.
   const monthsInYear = (y) => {
     const overlapEnd = Math.min(y * 12, months);
     return Math.max(0, overlapEnd - (y - 1) * 12);
   };
   const loanMonthsInYear = (y) => (months === 0 ? 0 : monthsInYear(y));
   const leaseMonthsInYear = (y) => (isLease ? monthsInYear(y) : 0);
-  // Penalización anual del arrendamiento por km arriba del límite del contrato.
+  // Annual lease penalty for km above the contract's limit.
   const leaseKmCapYear = nonNegative(inputs.leaseKmCapYear);
   const leaseExcessKmFee = nonNegative(inputs.leaseExcessKmFee);
   const annualKm = monthlyKm * 12;
@@ -573,12 +578,12 @@ function cashflowStage(inputs, ctx) {
     isLease && leaseKmCapYear > 0 && annualKm > leaseKmCapYear
       ? (annualKm - leaseKmCapYear) * leaseExcessKmFee
       : 0;
-  // Año en que vence el globo, si cae dentro del horizonte; ese año recibe el pago final.
+  // Year the balloon falls due, if within the horizon; that year gets the final payment.
   const balloonDueYear =
     isBalloon && balloonAmount > 0 && months > 0 && months <= horizonMonths
       ? Math.ceil(months / 12)
       : 0;
-  // Valor neto de venta por peso de valor de mercado; 0 en arrendamiento (sin reventa).
+  // Net sale value per peso of market value; 0 for a lease (no resale).
   const saleNetFactor = owned ? nonNegative(inputs.salesFactor) * (1 - sellingCostPct) : 0;
 
   const cashflow = [];
@@ -593,15 +598,15 @@ function cashflowStage(inputs, ctx) {
   let totalRepairReserve = 0;
   for (let y = 1; y <= years; y++) {
     const infl = Math.pow(1 + generalInflation, y - 1);
-    // El globo se suma como pago único en su año de vencimiento, no se prorratea.
+    // The balloon is added as a single payment in the year it falls due, not prorated.
     const yearPayment = isLease
       ? leaseMonthsInYear(y) * leaseMonthly
       : loanMonthsInYear(y) * monthlyPayment + (y === balloonDueYear ? balloonAmount : 0);
-    const yearEnergy = (energyByYear[y - 1]?.cost || 0) * 12; // ya trae su propia inflación
-    // El seguro fijo no se infla (en la práctica baja con el valor del auto); el
-    // seguro como % del valor declina con la depreciación. El refrendo sí se infla.
+    const yearEnergy = (energyByYear[y - 1]?.cost || 0) * 12; // already carries its own inflation
+    // Fixed insurance is not inflated (in practice it drops with the car value);
+    // insurance as % of value declines with depreciation. The refrendo is inflated.
     const yearInsRef = insuranceAnnualForYear(y) + monthlyRefrendo * 12 * infl;
-    // En arrendamiento no apartas reserva para reparaciones mayores.
+    // A lease sets no reserve aside for major repairs.
     const yearRepair = owned ? repairReserveYear(y) : 0;
     const yearMaint = monthlyMaint * 12 * infl + yearRepair + leaseKmPenaltyYear;
     const yearOther =
@@ -641,14 +646,14 @@ function cashflowStage(inputs, ctx) {
       cMaint: Math.round(cMaint),
       cOther: Math.round(cOther),
       cTotal: Math.round(cTotal),
-      // Lo que dejaría vender ese año (venta neta − deuda viva), para que la
-      // gráfica de comparación refleje el patrimonio y no sólo el flujo.
+      // What selling that year would leave (net sale − remaining debt), so the
+      // comparison chart reflects equity and not just cash flow.
       liqValue: Math.round(depValue * saleNetFactor - debtRemaining),
     });
   }
 
   const totalSpentGross = cTotal;
-  // El costo neto descuenta lo que REALMENTE recuperas (venta − deuda viva), no la venta completa.
+  // The net cost subtracts what you ACTUALLY recover (sale − remaining debt), not the full sale.
   const totalProjectCost = totalSpentGross - terminalRecovery;
   const netProjectResult = cumRevenue + terminalRecovery - totalSpentGross;
 
@@ -696,18 +701,18 @@ function economicsStage(inputs, ctx) {
     totalProjectCost,
   } = ctx;
 
-  // Tasa de oportunidad: lo que tu dinero rendiría en otro lado (p. ej. CETES). Con
-  // ella se descuentan los flujos; no es la tasa del crédito.
+  // Opportunity rate: what your money would earn elsewhere (e.g. CETES, Mexican
+  // treasury bills). The flows are discounted with it; it is not the loan's rate.
   const discountAnnual = clamp(inputs.discountRate, 0, 1);
-  // Flujos anuales del comprador (− sale, + entra): el desembolso inicial va en t0 y
-  // el último año suma la recuperación terminal (venta neta − deuda).
+  // Buyer's annual flows (− out, + in): the day-one cash goes at t0 and the last
+  // year adds the terminal recovery (net sale − debt).
   const annualNet = cashflow.map((c, idx) => c.revenue - (c.costs - (idx === 0 ? upfrontCash : 0)));
   if (annualNet.length) annualNet[annualNet.length - 1] += terminalRecovery;
   const projectCashflows = [-upfrontCash, ...annualNet];
   const npvProject = npv(discountAnnual, projectCashflows);
   const irrProject = irr(projectCashflows);
-  // Valor presente del costo de propiedad, sin ingresos: compara autos y formas de
-  // pago en la misma base.
+  // Present value of the cost of ownership, without income: compares cars and
+  // payment methods on the same basis.
   let pvLifetimeCost = upfrontCash;
   cashflow.forEach((c, i) => {
     pvLifetimeCost += (c.costs - (i === 0 ? upfrontCash : 0)) / Math.pow(1 + discountAnnual, i + 1);
@@ -715,26 +720,26 @@ function economicsStage(inputs, ctx) {
   pvLifetimeCost -= terminalRecovery / Math.pow(1 + discountAnnual, years);
   const eac = equivalentAnnualCost(pvLifetimeCost, discountAnnual, years);
 
-  // TCO nominal (sin descontar) = costo neto del proyecto, total, por año y por km.
+  // Nominal TCO (undiscounted) = net project cost, in total, per year and per km.
   const tcoTotal = totalProjectCost;
   const tcoPerYear = tcoTotal / years;
   const totalKmHorizon = monthlyKm * 12 * years;
   const costPerKm = totalKmHorizon > 0 ? tcoTotal / totalKmHorizon : NaN;
-  // Depreciación como costo: precio − valor de mercado al final, antes de costos de
-  // venta (vender es una transacción, no depreciación). Sin propiedad no aplica.
+  // Depreciation as a cost: price − market value at the end, before selling costs
+  // (selling is a transaction, not depreciation). Not applicable without ownership.
   const depreciationCost = owned ? carPrice - grossSalePrice : 0;
   const financingCost = isLease
     ? leaseMonthly * Math.min(months, horizonMonths) + cashPaid
     : totalInterest + openingFee;
 
-  // Tasa efectiva anual y CAT (incluye la comisión de apertura).
+  // Effective annual rate and CAT (includes the opening fee).
   const ear = financed > 0 ? Math.pow(1 + interestRate / 12, 12) - 1 : 0;
   const catMonthly =
     financed > 0 ? solvePeriodicRate(financed - openingFee, monthlyPayment, months) : 0;
   const cat = financed > 0 ? Math.pow(1 + catMonthly, 12) - 1 : 0;
 
-  // ¿Financiar o pagar de contado? Ambos caminos en valor presente a la tasa de
-  // oportunidad, con la tasa mensual equivalente a la anual. Positivo = financiar conviene.
+  // Finance or pay cash? Both paths in present value at the opportunity rate, with
+  // the monthly rate equivalent to the annual one. Positive = financing wins.
   const dM = Math.pow(1 + discountAnnual, 1 / 12) - 1;
   const pvPaymentsAtOpportunity =
     financed > 0
@@ -745,7 +750,7 @@ function economicsStage(inputs, ctx) {
   const pvFinancedPath = cashPaid + openingFee + pvPaymentsAtOpportunity;
   const pvCashPath = Math.max(0, carPrice - tradeInValue);
   const financeVsCashPV = pvCashPath - pvFinancedPath;
-  // Lo que habría rendido el desembolso inicial invertido durante el horizonte.
+  // What the day-one cash would have earned invested over the horizon.
   const opportunityCostUpfront = upfrontCash * (Math.pow(1 + discountAnnual, years) - 1);
 
   return {
@@ -772,7 +777,7 @@ function economicsStage(inputs, ctx) {
 // Keys of the object calculate() returns, in order. Every tab, chart and the
 // report read these; the characterization snapshots pin both values and order.
 const RESULT_KEYS = [
-  // Compra y financiamiento
+  // Purchase and financing
   'carPrice',
   'cashPaid',
   'financed',
@@ -787,7 +792,7 @@ const RESULT_KEYS = [
   'timeValueOfMoney',
   'months',
   'amortRows',
-  // Economía por viaje y punto de equilibrio
+  // Per-trip economics and break-even
   'grossPerTrip',
   'platformCommission',
   'taxAmountPerTrip',
@@ -806,7 +811,7 @@ const RESULT_KEYS = [
   'operatingFixedMonthlyCosts',
   'fixedMonthlyCosts',
   'operatingBreakEvenTrips',
-  // Costos mensuales
+  // Monthly costs
   'monthlyFuel',
   'monthlyIns',
   'monthlyRefrendo',
@@ -819,7 +824,7 @@ const RESULT_KEYS = [
   'monthlyOpCosts',
   'monthlyTotalOperative',
   'monthlyFixedNonKm',
-  // Intensidad de trabajo y viabilidad
+  // Work intensity and feasibility
   'breakEvenTrips',
   'tripsPerDay',
   'hoursPerDay',
@@ -831,7 +836,7 @@ const RESULT_KEYS = [
   'tripsPerHourWarn',
   'safetyMargin',
   'profitTarget',
-  // Liquidación y resultado del proyecto
+  // Liquidation and project result
   'valueAtEnd',
   'actualSalePrice',
   'remainingDebt',
@@ -842,7 +847,7 @@ const RESULT_KEYS = [
   'cumRevenue',
   'cumCosts',
   'cashflow',
-  // Kilometraje, energía y autonomía
+  // Mileage, energy and range
   'monthlyKm',
   'uberKm',
   'uberMonthlyKm',
@@ -864,7 +869,7 @@ const RESULT_KEYS = [
   'avgMonthlyEnergy',
   'totalProjectCost',
   'totalSpentGross',
-  // Ingeniería económica
+  // Engineering economics
   'tradeInValue',
   'acquisitionFees',
   'sellingCostPct',
@@ -890,7 +895,7 @@ const RESULT_KEYS = [
   'pvFinancedPath',
   'pvCashPath',
   'opportunityCostUpfront',
-  // Régimen fiscal, tipo de financiamiento y modo de seguro aplicados
+  // Tax regime, finance type and insurance mode applied
   'taxRegime',
   'taxRate',
   'resicoRate',

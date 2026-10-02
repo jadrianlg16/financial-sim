@@ -13,15 +13,14 @@ import { Verdict } from './Verdict.jsx';
 import { fmtN } from '../domain/format.js';
 
 // ============================================================================
-// PÁGINA: DASHBOARD
+// PAGE: DASHBOARD
 // ----------------------------------------------------------------------------
-// Pantalla principal de resultados: el veredicto (viable, pesado, inviable o sólo
-// costo), el resumen de decisión de compra, el impacto en el ingreso (sólo si se
-// capturó), los KPIs del crédito y del proyecto con su explicación en un tooltip,
-// y las gráficas de largo plazo: amortización, estructura mensual de costos, gasto
-// acumulado por categoría (incluye el desembolso inicial) y valor del auto contra
-// la deuda. Una tabla clasifica cada costo como fijo o variable y directo o
-// indirecto.
+// Main results screen: the verdict (viable, heavy, not viable or cost only),
+// the purchase decision summary, the impact on income (only when an income was
+// entered), the loan and project KPIs with an explanation in a tooltip, and the
+// long-term charts: amortization, monthly cost structure, cumulative spend by
+// category (including the day-one cash) and the car value against the debt. A
+// table classifies each cost as fixed or variable and direct or indirect.
 // ============================================================================
 export const Dashboard = ({ result, inputs }) => {
   const costBreakdown = costBreakdownOf(result, inputs);

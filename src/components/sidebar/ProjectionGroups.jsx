@@ -8,8 +8,8 @@ import { depreciatedValue, effectiveDepRate } from '../../domain/depreciation.js
 import { fmtMXN, fmtPct } from '../../domain/format.js';
 import { INPUT_LIMITS } from '../../domain/inputSchema.js';
 
-// Supuestos financieros (tasa de oportunidad, inflación, reservas, riesgo de
-// pérdida total), proyección de valor y venta del auto, e ingreso opcional.
+// Financial assumptions (opportunity rate, inflation, reserves, total-loss
+// risk), value projection and sale of the car, and optional income.
 export const ProjectionGroups = ({ inputs, set, mode }) => {
   return (
     <>

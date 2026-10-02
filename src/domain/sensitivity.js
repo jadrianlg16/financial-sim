@@ -1,8 +1,9 @@
 import { calculate } from './calculate.js';
 
 /**
- * Variables que mueve el análisis de sensibilidad y cuánto (±delta). Las de
- * energía dependen del motor, y sin Uber se omiten las del ingreso por viaje.
+ * Variables the sensitivity analysis moves, and by how much (±delta). The energy
+ * ones depend on the powertrain, and without Uber the per-trip income ones are
+ * left out.
  */
 export function buildSensKeys(inputs) {
   const keys = [
@@ -20,7 +21,7 @@ export function buildSensKeys(inputs) {
     { key: 'salesFactor', label: 'Factor de venta', delta: 0.15 },
     { key: 'discountRate', label: 'Tasa de descuento', delta: 0.25 },
   ];
-  // Variables de energía según el motor
+  // Energy variables for the powertrain
   if (inputs.vehicleType === 'electric') {
     keys.push({ key: 'electricityPrice', label: 'Precio electricidad', delta: 0.2 });
     keys.push({ key: 'kmPerKwh', label: 'Rendimiento km/kWh', delta: 0.2 });
@@ -30,7 +31,7 @@ export function buildSensKeys(inputs) {
   } else if (inputs.vehicleType === 'hybrid') {
     keys.push({ key: 'fuelPrice', label: 'Combustible', delta: 0.2 });
     keys.push({ key: 'kmpl', label: 'Rendimiento km/L', delta: 0.2 });
-    // La electricidad sólo afecta a un híbrido ENCHUFABLE; si no, el km eléctrico no aplica.
+    // Electricity only affects a PLUG-IN hybrid; otherwise the electric km does not apply.
     if (inputs.plugInHybrid)
       keys.push({ key: 'electricityPrice', label: 'Precio electricidad', delta: 0.2 });
   } else {
@@ -41,12 +42,12 @@ export function buildSensKeys(inputs) {
 }
 
 /**
- * Cambia cada variable ±delta por separado y mide el punto de equilibrio (o el
- * costo neto del proyecto sin Uber); devuelve las variables ordenadas por impacto.
+ * Moves each variable ±delta on its own and measures the break-even (or the net
+ * project cost without Uber); returns the variables sorted by impact.
  */
 export function sensitivity(inputs, { year } = {}) {
   const uber = inputs.operationMode !== 'no-uber';
-  // En modo Uber medimos el punto de equilibrio; sin Uber, el costo neto del proyecto.
+  // In Uber mode we measure the break-even; without Uber, the net project cost.
   const metricOf = (scenario) => {
     const result = calculate(scenario, { year });
     return uber ? result.breakEvenTrips : result.totalProjectCost;

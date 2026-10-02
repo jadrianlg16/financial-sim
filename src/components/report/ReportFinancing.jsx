@@ -1,7 +1,7 @@
 import { fmtMXN, fmtPct } from '../../domain/format.js';
 
-// Cómo se paga el auto: arrendamiento, crédito con pago final, crédito tradicional
-// o contado, con el CAT, el costo del dinero y la comparación contra pagar de contado.
+// How the car is paid for: lease, balloon loan, standard loan or cash, with the
+// CAT, the cost of money and the comparison against paying cash.
 export const ReportFinancing = ({ result, inputs }) => (
   <>
     {result.isLease ? (
@@ -79,7 +79,7 @@ export const ReportFinancing = ({ result, inputs }) => (
   </>
 );
 
-// Financiar vs. pagar de contado, comparados en valor presente.
+// Financing vs. paying cash, compared in present value.
 const FinanceVsCash = ({ result }) => (
   <p
     style={{

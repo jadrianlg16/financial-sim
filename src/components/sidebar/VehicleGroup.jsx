@@ -10,25 +10,25 @@ import { fmtN, fmtPct } from '../../domain/format.js';
 import { currentYear } from '../../domain/year.js';
 import { powertrainOf } from './powertrain.js';
 
-// Auto: preset o captura libre, motor, condición, precio, año y rendimiento.
-// Elegir un preset o cambiar entre nuevo y usado ajusta supuestos típicos
-// (garantía, reserva de reparaciones, tasa) sin pisar valores ya editados.
+// Car: preset or free entry, powertrain, condition, price, year and efficiency.
+// Picking a preset or switching between new and used adjusts typical assumptions
+// (warranty, repair reserve, rate) without overwriting values already edited.
 export const VehicleGroup = ({ inputs, setInputs, set, mode }) => {
   const applyCarPreset = (k) => setInputs((prev) => applyCarPresetTo(prev, k));
-  // Cambiar entre nuevo/usado ajusta supuestos típicos (sólo si siguen en su default,
-  // para no pisar valores que el usuario ya editó a mano).
+  // Switching between new and used adjusts typical assumptions (only while they
+  // still hold their default, so values the user edited by hand are kept).
   const applyCondition = (cond) =>
     setInputs((prev) => {
       const next = { ...prev, vehicleCondition: cond };
       if (cond === 'used') {
-        if (!prev.repairReserveAnnual) next.repairReserveAnnual = 6000; // los usados sí tienen reparaciones
+        if (!prev.repairReserveAnnual) next.repairReserveAnnual = 6000; // used cars do need repairs
         if (prev.depreciationMethod === 'straight') next.depreciationMethod = 'declining';
-        if (prev.interestRate <= 0.135) next.interestRate = 0.16; // crédito de usado suele ser más caro
-        next.warrantyYearsRemaining = 0; // un usado ya no tiene garantía de fábrica
+        if (prev.interestRate <= 0.135) next.interestRate = 0.16; // used-car loans cost more
+        next.warrantyYearsRemaining = 0; // a used car has no factory warranty left
       } else {
         if (prev.repairReserveAnnual === 6000) next.repairReserveAnnual = 0;
         next.odometerKm = 0;
-        next.warrantyYearsRemaining = 3; // un nuevo trae 3 años de garantía
+        next.warrantyYearsRemaining = 3; // a new car comes with a 3-year warranty
       }
       return next;
     });

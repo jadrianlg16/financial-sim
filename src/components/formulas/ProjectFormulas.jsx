@@ -12,7 +12,7 @@ export const ProjectFormulas = ({ result, inputs }) => {
       : dm === 'realistic'
         ? 'realista (caída 1er año + saldo decreciente)'
         : 'saldo decreciente (geométrico)';
-  // Tasa de depreciación efectiva: un usado deprecia más lento y se afina con la edad.
+  // Effective depreciation rate: a used car depreciates more slowly, tuned by age.
   const isUsedCar = inputs.vehicleCondition === 'used';
   const effDepRate = effectiveDepRate(inputs);
   return (

@@ -21,12 +21,12 @@ export function effectiveDepRate(inputs, year = currentYear()) {
   return clamp(usedRate, 0.04, 0.3);
 }
 
-// Depreciación con MÉTODO seleccionable (el activo nunca vale menos de 0):
-//   - 'declining'  Saldo decreciente / geométrico:  V_n = V0·(1−d)^n   [realista, default]
-//   - 'straight'   Lineal sobre precio original:     V_n = V0·(1−d·n)
-//   - 'realistic'  Caída fuerte el 1er año y luego saldo decreciente:
+// Depreciation with a selectable METHOD (the asset is never worth less than 0):
+//   - 'declining'  Declining balance / geometric:  V_n = V0·(1−d)^n   [realistic, default]
+//   - 'straight'   Straight line on the original price: V_n = V0·(1−d·n)
+//   - 'realistic'  Steep first-year drop, then declining balance:
 //                  V_1 = V0·(1−d1);  V_n = V_1·(1−d)^(n−1)
-// La tasa d ya viene ajustada por condición y edad (effectiveDepRate).
+// The rate d is already adjusted for condition and age (effectiveDepRate).
 /** Market value of a car bought for `price` after `n` years, as of reference `year`. */
 export function depreciatedValue(price, inputs, n, year = currentYear()) {
   if (n <= 0) return price;

@@ -2,13 +2,13 @@ import { Wallet, AlertTriangle, CheckCircle2, Battery } from 'lucide-react';
 import { fmtFixed, fmtMXN, fmtN } from '../domain/format.js';
 
 // ============================================================================
-// BLOQUE: VEREDICTO
+// BLOCK: VERDICT
 // ----------------------------------------------------------------------------
-// Resumen de una línea, en lenguaje simple, que responde "¿conviene o no?":
-//   - Sin Uber → cuánto cuesta tener el auto y el resultado final.
-//   - Uber     → viable / viable pero pesado / inviable, y por qué (pérdida por
-//                viaje, autonomía o carga del EV, horas insuficientes, o más de
-//                4 viajes por hora, que no es realista).
+// One-line, plain-language summary that answers "is it worth it?":
+//   - Without Uber → what owning the car costs and the final result.
+//   - Uber         → viable / viable but heavy / not viable, and why (loss per
+//                    trip, EV range or charging, not enough hours, or more than
+//                    4 trips per hour, which is not realistic).
 // ============================================================================
 export const Verdict = ({ result, inputs }) => {
   if (!result.isUberMode) {

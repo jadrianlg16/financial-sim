@@ -5,13 +5,13 @@ import { buildAIPrompt, importCaseText } from '../domain/aiCase.js';
 import { TEXT_LIMITS } from '../domain/inputSchema.js';
 
 // ============================================================================
-// PÁGINA: IMPORTAR / AI
+// PAGE: IMPORTAR / AI (IMPORT)
 // ----------------------------------------------------------------------------
-// Paso 1: a partir del nombre de un auto genera un prompt que pide a un LLM un JSON
-// estricto con todas las variables y una fuente por dato (las estimaciones van
-// marcadas [ESTIMACIÓN]). Paso 2: el JSON pegado se valida y se aplica al
-// escenario actual; las fuentes se guardan y se muestran en una tabla que también
-// aparece en el Reporte. Al final, notas libres del usuario que viajan al Reporte.
+// Step 1: from a car's name, builds a prompt that asks an LLM for strict JSON with
+// every variable and one source per figure (estimates are marked [ESTIMACIÓN]).
+// Step 2: the pasted JSON is validated and applied to the current scenario; the
+// sources are kept and shown in a table that also appears in the report. Last,
+// the user's free-form notes, which travel to the report.
 // ============================================================================
 export const ImportCase = ({ inputs, setInputs, sources, setSources }) => {
   const [carName, setCarName] = useState('');
@@ -170,7 +170,7 @@ export const ImportCase = ({ inputs, setInputs, sources, setSources }) => {
           </table>
         </div>
       )}
-      {/* Notas libres del usuario: aparecen en el Reporte y en el .md descargado */}
+      {/* User's free-form notes: they appear in the report and in the downloaded .md */}
       <div className="card">
         <div className="card-title">
           <Receipt size={11} /> Notas y fuentes

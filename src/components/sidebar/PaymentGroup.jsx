@@ -7,8 +7,8 @@ import { TIPS } from '../../content/tips.js';
 import { fmtMXN, fmtPct } from '../../domain/format.js';
 import { INPUT_LIMITS } from '../../domain/inputSchema.js';
 
-// Forma de pago: contado, crédito (tradicional, con pago final o arrendamiento) o
-// mixto, con enganche, tasa, plazo, auto a cuenta y gastos de adquisición.
+// Payment method: cash, credit (standard, balloon or lease) or a mix, with the
+// enganche (down payment), rate, term, trade-in and purchase costs.
 export const PaymentGroup = ({ inputs, set, mode }) => {
   return (
     <>
@@ -63,7 +63,7 @@ export const PaymentGroup = ({ inputs, set, mode }) => {
             </div>
           </div>
         )}
-        {/* Crédito tradicional o globo: enganche + tasa/plazo + (globo) residual */}
+        {/* Standard or balloon loan: down payment + rate/term + (balloon) residual */}
         {inputs.purchaseMode === 'credit' && (inputs.financeType || 'annuity') !== 'lease' && (
           <>
             <div className="field">
@@ -116,7 +116,7 @@ export const PaymentGroup = ({ inputs, set, mode }) => {
             )}
           </>
         )}
-        {/* Arrendamiento: renta + pago inicial + plazo + tope de km */}
+        {/* Lease: rent + upfront payment + term + km cap */}
         {inputs.purchaseMode === 'credit' && inputs.financeType === 'lease' && (
           <>
             <Field
@@ -188,7 +188,7 @@ export const PaymentGroup = ({ inputs, set, mode }) => {
             suffix="MXN (el resto se financia)"
           />
         )}
-        {/* Tasa/plazo/comisión: para crédito (no lease) y mixto. El lease no usa estos. */}
+        {/* Rate/term/fee: for credit (not lease) and mixed. A lease does not use them. */}
         {inputs.purchaseMode !== 'cash' &&
           !(inputs.purchaseMode === 'credit' && inputs.financeType === 'lease') && (
             <>

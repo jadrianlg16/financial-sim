@@ -3,12 +3,12 @@ import { GLOSSARY_LABELS, GLOSSARY_SECTIONS } from '../content/glossary.js';
 import { TIPS } from '../content/tips.js';
 
 // ============================================================================
-// PÁGINA: GLOSARIO
+// PAGE: GLOSARIO (GLOSSARY)
 // ----------------------------------------------------------------------------
-// Las mismas explicaciones de los tooltips "?" (TIPS) reunidas para leerlas de
-// corrido. GLOSSARY_LABELS da una etiqueta legible a cada término y
-// GLOSSARY_SECTIONS los agrupa por tema; un término que no esté en ninguna sección
-// cae en "Otros", así ninguna definición se pierde.
+// The same explanations as the "?" tooltips (TIPS), gathered to read in one go.
+// GLOSSARY_LABELS gives each term a readable label and GLOSSARY_SECTIONS groups
+// them by topic; a term that is in no section falls into "Otros" (other), so no
+// definition is lost.
 // ============================================================================
 const humanizeSlug = (k) =>
   k
@@ -16,7 +16,7 @@ const humanizeSlug = (k) =>
     .replace(/^./, (c) => c.toUpperCase())
     .trim();
 export const Glossary = () => {
-  // Términos de TIPS que no quedaron en ninguna sección → van a "Otros" para no perderlos.
+  // TIPS terms left out of every section go to "Otros" so they are not lost.
   const placed = new Set(GLOSSARY_SECTIONS.flatMap((s) => s.keys));
   const leftovers = Object.keys(TIPS).filter((k) => !placed.has(k));
   const sections = leftovers.length
