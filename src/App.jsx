@@ -15,6 +15,7 @@ import { CAR_PRESETS, SCENARIO_COLORS, VEHICLE_TYPES } from './domain/constants.
 import { DEFAULT_INPUTS } from './domain/defaults.js';
 import { STORAGE_KEY, readPersisted } from './storage/persistence.js';
 import { FontsAndTheme } from './theme/FontsAndTheme.jsx';
+import { ErrorBoundary } from './components/ui/ErrorBoundary.jsx';
 
 // Each tab is its own chunk, loaded the first time it is opened, so the first
 // download carries only the shell, the sidebar and the model. Recharts goes with
@@ -28,6 +29,24 @@ const Formulas = lazyNamed(() => import('./components/Formulas.jsx'), 'Formulas'
 const ImportCase = lazyNamed(() => import('./components/ImportCase.jsx'), 'ImportCase');
 const Report = lazyNamed(() => import('./components/Report.jsx'), 'Report');
 const Glossary = lazyNamed(() => import('./components/Glossary.jsx'), 'Glossary');
+
+const TabError = ({ onRetry, onReset }) => (
+  <div className="card" role="alert" style={{ padding: 32 }}>
+    <div className="card-title">No se pudo mostrar esta pestaña</div>
+    <p style={{ fontSize: 13, color: 'var(--muted)', lineHeight: 1.6 }}>
+      Puede deberse a datos guardados por una versión anterior. Reintenta, o borra los datos
+      guardados para volver a los valores iniciales.
+    </p>
+    <div style={{ display: 'flex', gap: 8 }}>
+      <button className="btn outline" onClick={onRetry}>
+        Reintentar
+      </button>
+      <button className="btn accent" onClick={onReset}>
+        Borrar datos guardados
+      </button>
+    </div>
+  </div>
+);
 
 const TabLoading = () => (
   <div
@@ -51,18 +70,14 @@ const TabLoading = () => (
 // ============================================================================
 export default function App() {
   const [persisted] = useState(readPersisted);
-  const [inputs, setInputs] = useState(() =>
-    persisted?.inputs ? { ...DEFAULT_INPUTS, ...persisted.inputs } : DEFAULT_INPUTS,
-  );
+  const [inputs, setInputs] = useState(() => persisted?.inputs ?? DEFAULT_INPUTS);
   // Los escenarios guardados se almacenan ligeros (sin el resultado) y se recalculan al cargar.
   const [saved, setSaved] = useState(() =>
-    Array.isArray(persisted?.saved)
-      ? persisted.saved.map((s) => ({ ...s, result: calculate(s.inputs) }))
-      : [],
+    (persisted?.saved ?? []).map((s) => ({ ...s, result: calculate(s.inputs) })),
   );
   const [tab, setTab] = useState('dashboard');
-  const [sources, setSources] = useState(persisted?.sources || null);
-  const colorIdx = useRef(Array.isArray(persisted?.saved) ? persisted.saved.length : 0);
+  const [sources, setSources] = useState(persisted?.sources ?? null);
+  const colorIdx = useRef(persisted?.saved.length ?? 0);
   const R = useMemo(() => calculate(inputs), [inputs]);
   useEffect(() => {
     try {
@@ -150,25 +165,39 @@ export default function App() {
               <HelpCircle size={13} /> Glosario
             </button>
           </div>
-          <Suspense fallback={<TabLoading />}>
-            {tab === 'dashboard' && <Dashboard R={R} inputs={inputs} />}
-            {tab === 'compare' && (
-              <Comparison saved={saved} currentInputs={inputs} setSaved={setSaved} />
-            )}
-            {tab === 'sens' && <Sensitivity inputs={inputs} />}
-            {tab === 'mc' && <MonteCarlo inputs={inputs} />}
-            {tab === 'formulas' && <Formulas R={R} inputs={inputs} />}
-            {tab === 'import' && (
-              <ImportCase
-                inputs={inputs}
-                setInputs={setInputs}
-                sources={sources}
-                setSources={setSources}
+          {/* Si una pestaña falla al dibujarse, sólo esa pestaña muestra el error. */}
+          <ErrorBoundary
+            key={tab}
+            fallback={({ retry }) => (
+              <TabError
+                onRetry={retry}
+                onReset={() => {
+                  handleReset();
+                  retry();
+                }}
               />
             )}
-            {tab === 'report' && <Report R={R} inputs={inputs} sources={sources} />}
-            {tab === 'glossary' && <Glossary />}
-          </Suspense>
+          >
+            <Suspense fallback={<TabLoading />}>
+              {tab === 'dashboard' && <Dashboard R={R} inputs={inputs} />}
+              {tab === 'compare' && (
+                <Comparison saved={saved} currentInputs={inputs} setSaved={setSaved} />
+              )}
+              {tab === 'sens' && <Sensitivity inputs={inputs} />}
+              {tab === 'mc' && <MonteCarlo inputs={inputs} />}
+              {tab === 'formulas' && <Formulas R={R} inputs={inputs} />}
+              {tab === 'import' && (
+                <ImportCase
+                  inputs={inputs}
+                  setInputs={setInputs}
+                  sources={sources}
+                  setSources={setSources}
+                />
+              )}
+              {tab === 'report' && <Report R={R} inputs={inputs} sources={sources} />}
+              {tab === 'glossary' && <Glossary />}
+            </Suspense>
+          </ErrorBoundary>
         </main>
       </div>
     </div>

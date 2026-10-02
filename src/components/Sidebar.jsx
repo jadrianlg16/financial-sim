@@ -7,7 +7,7 @@ import { ProjectionGroups } from './sidebar/ProjectionGroups.jsx';
 import { UberGroups } from './sidebar/UberGroups.jsx';
 import { VehicleGroup } from './sidebar/VehicleGroup.jsx';
 import { Segmented } from './ui/Segmented.jsx';
-import { readSidebarMode } from '../storage/persistence.js';
+import { readSidebarMode, SIDEBAR_MODE_KEY } from '../storage/persistence.js';
 
 // ============================================================================
 // PANEL LATERAL
@@ -23,7 +23,7 @@ export const Sidebar = ({ inputs, setInputs, onReset, onSave }) => {
   const changeMode = (m) => {
     setMode(m);
     try {
-      localStorage.setItem('autopilot.sidebarMode', m);
+      localStorage.setItem(SIDEBAR_MODE_KEY, m);
     } catch {
       /* almacenamiento no disponible: el modo sólo dura esta sesión */
     }
