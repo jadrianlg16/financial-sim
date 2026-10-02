@@ -7,7 +7,7 @@ export const TIPS = {
   breakeven:
     '<strong>Punto de equilibrio.</strong> Lo mínimo que necesitas trabajar para que el proyecto se pague solo: cubre costos mensuales y recupera lo que no se cubra con la venta final del auto menos la deuda.',
   depreciation:
-    '<strong>Depreciación.</strong> Cuánto pierde de valor el auto cada año, calculado sobre el PRECIO ORIGINAL (lineal). Con 20%: tras 1 año vale 80% del original, tras 2 años 60%, tras 3 años 40%, etc.',
+    '<strong>Depreciación.</strong> Cuánto pierde de valor el auto cada año. Con el método por defecto (saldo decreciente) pierde el mismo % del valor que le queda: con 20%, tras 1 año vale 80% del precio, tras 2 años 64% y tras 3 años 51%. El método se elige en Proyección y venta (modo Avanzado).',
   finalPosition:
     '<strong>Resultado final.</strong> Lo que te queda al terminar: el dinero de la venta del auto menos lo que aún debes del crédito.',
   monthlyTotal:
