@@ -122,93 +122,147 @@ Notas técnicas:
 Recuerda: SOLO el JSON, con una fuente por cada dato en "sources".`;
 }
 
+// Valores permitidos de cada campo de opción: un valor desconocido se ignora en vez
+// de colarse al modelo (p. ej. un tipo de motor desconocido daría costo de energía 0).
+const ALLOWED = {
+  vehicleType: ['gasoline', 'diesel', 'hybrid', 'electric'],
+  vehicleCondition: ['new', 'used'],
+  insuranceMode: ['fixed', 'pctOfValue'],
+  taxRegime: ['resico', 'gross', 'net'],
+  financeType: ['annuity', 'balloon', 'lease'],
+  depreciationMethod: ['declining', 'straight', 'realistic'],
+};
+
+// Campos que se aceptan del JSON: [sección, llave en el JSON, input, tipo]. Los
+// números deben ser finitos, los textos no vacíos y las opciones de ALLOWED.
+const IMPORT_FIELDS = [
+  ['vehicle', 'name', 'carName', 'text'],
+  ['vehicle', 'type', 'vehicleType', 'option'],
+  ['vehicle', 'plugInHybrid', 'plugInHybrid', 'boolean'],
+  ['vehicle', 'price', 'carPrice', 'number'],
+  ['vehicle', 'year', 'carYear', 'number'],
+  ['vehicle', 'kmpl', 'kmpl', 'number'],
+  ['vehicle', 'kmPerKwh', 'kmPerKwh', 'number'],
+  ['vehicle', 'batteryCapacityKwh', 'batteryCapacityKwh', 'number'],
+  ['vehicle', 'chargerPowerKw', 'chargerPowerKw', 'number'],
+  ['vehicle', 'condition', 'vehicleCondition', 'option'],
+  ['vehicle', 'odometerKm', 'odometerKm', 'number'],
+  ['vehicle', 'usedDepreciationRate', 'usedDepreciationRate', 'number'],
+  ['vehicle', 'warrantyYearsRemaining', 'warrantyYearsRemaining', 'number'],
+  ['vehicle', 'description', 'carDescription', 'text'],
+  ['vehicle', 'justification', 'carJustification', 'text'],
+  ['costs', 'monthlyInsurance', 'monthlyInsurance', 'number'],
+  ['costs', 'insuranceMode', 'insuranceMode', 'option'],
+  ['costs', 'insurancePctOfValue', 'insurancePctOfValue', 'number'],
+  ['costs', 'annualMaintenance', 'annualMaintenance', 'number'],
+  ['costs', 'monthlyRefrendo', 'monthlyRefrendo', 'number'],
+  ['costs', 'dataPlan', 'dataPlan', 'number'],
+  ['costs', 'carWash', 'carWash', 'number'],
+  ['costs', 'carWashTips', 'carWashTips', 'number'],
+  ['costs', 'miscellaneous', 'miscellaneous', 'number'],
+  ['costs', 'accessories', 'accessories', 'number'],
+  ['costs', 'repairReserveAnnual', 'repairReserveAnnual', 'number'],
+  ['costs', 'uberWearFactor', 'uberWearFactor', 'number'],
+  ['costs', 'uberKmPerTrip', 'uberKmPerTrip', 'number'],
+  ['costs', 'publicChargeFraction', 'publicChargeFraction', 'number'],
+  ['costs', 'publicChargePrice', 'publicChargePrice', 'number'],
+  ['oneTime', 'toxicologyReport', 'toxicologyReport', 'number'],
+  ['oneTime', 'uberCertification', 'uberCertification', 'number'],
+  ['oneTime', 'acquisitionFees', 'acquisitionFees', 'number'],
+  ['uber', 'taxRegime', 'taxRegime', 'option'],
+  ['uber', 'resicoRate', 'resicoRate', 'number'],
+  ['uber', 'uberCommission', 'uberCommission', 'number'],
+  ['uber', 'taxRate', 'taxRate', 'number'],
+  ['financing', 'financeType', 'financeType', 'option'],
+  ['financing', 'balloonPct', 'balloonPct', 'number'],
+  ['financing', 'leaseMonthly', 'leaseMonthly', 'number'],
+  ['financing', 'leaseDownPayment', 'leaseDownPayment', 'number'],
+  ['financing', 'leaseTermMonths', 'leaseTermMonths', 'number'],
+  ['financing', 'leaseKmCapYear', 'leaseKmCapYear', 'number'],
+  ['financing', 'leaseExcessKmFee', 'leaseExcessKmFee', 'number'],
+  ['projection', 'depreciationMethod', 'depreciationMethod', 'option'],
+  ['projection', 'depreciationRate', 'depreciationRate', 'number'],
+  ['projection', 'firstYearDepreciation', 'firstYearDepreciation', 'number'],
+  ['projection', 'salesFactor', 'salesFactor', 'number'],
+  ['projection', 'sellingCostPct', 'sellingCostPct', 'number'],
+  ['projection', 'interestRate', 'interestRate', 'number'],
+  ['projection', 'theftLossProbAnnual', 'theftLossProbAnnual', 'number'],
+  ['projection', 'theftDeductiblePct', 'theftDeductiblePct', 'number'],
+];
+const SECTIONS = ['vehicle', 'costs', 'oneTime', 'uber', 'financing', 'projection'];
+const isPlainObject = (x) => x != null && typeof x === 'object' && !Array.isArray(x);
+
+// Convierte un valor del JSON al tipo del input; undefined si no es válido.
+const coerce = (kind, input, value) => {
+  if (kind === 'boolean') return !!value;
+  if (kind === 'text') return typeof value === 'string' && value ? value : undefined;
+  if (kind === 'option') return ALLOWED[input].includes(value) ? value : undefined;
+  const n = +value;
+  return Number.isFinite(n) ? n : undefined;
+};
+
+/**
+ * Applies a parsed case JSON (the schema buildAIPrompt asks for) on top of the
+ * current inputs. Only known fields are copied; numbers must be finite and
+ * option fields must hold an allowed value. Anything else is left unchanged and
+ * listed in `ignored` (as "section.key"). Never mutates `currentInputs`.
+ *
+ * @returns {{ ok: true, inputs: object, sources: object|null, ignored: string[] }
+ *   | { ok: false, error: string }}
+ */
 export function applyImportedJson(json, currentInputs) {
-  const merged = { ...currentInputs };
-  try {
-    if (json.vehicle) {
-      const v = json.vehicle;
-      merged.carPreset = 'custom';
-      if (v.name) merged.carName = v.name; // el nombre real del auto importado
-      if (v.type) merged.vehicleType = v.type;
-      if (v.plugInHybrid != null) merged.plugInHybrid = !!v.plugInHybrid;
-      if (v.price != null) merged.carPrice = +v.price;
-      if (v.year != null) merged.carYear = +v.year;
-      if (v.kmpl != null) merged.kmpl = +v.kmpl;
-      if (v.kmPerKwh != null) merged.kmPerKwh = +v.kmPerKwh;
-      if (v.batteryCapacityKwh != null) merged.batteryCapacityKwh = +v.batteryCapacityKwh;
-      if (v.chargerPowerKw != null) merged.chargerPowerKw = +v.chargerPowerKw;
-      if (v.condition === 'used' || v.condition === 'new') merged.vehicleCondition = v.condition;
-      if (v.odometerKm != null) merged.odometerKm = +v.odometerKm;
-      // Depreciación de usados y garantía. Si el JSON no trae garantía, se infiere de
-      // la condición (usado 0 años, nuevo 3), igual que al elegir un preset.
-      if (v.usedDepreciationRate != null) merged.usedDepreciationRate = +v.usedDepreciationRate;
-      if (v.warrantyYearsRemaining != null)
-        merged.warrantyYearsRemaining = +v.warrantyYearsRemaining;
-      else if (v.condition === 'used') merged.warrantyYearsRemaining = 0;
-      else if (v.condition === 'new') merged.warrantyYearsRemaining = 3;
-      if (v.description) merged.carDescription = v.description;
-      if (v.justification) merged.carJustification = v.justification;
-    }
-    if (json.costs) {
-      const c = json.costs;
-      if (c.monthlyInsurance != null) merged.monthlyInsurance = +c.monthlyInsurance;
-      if (c.insuranceMode === 'fixed' || c.insuranceMode === 'pctOfValue')
-        merged.insuranceMode = c.insuranceMode;
-      if (c.insurancePctOfValue != null) merged.insurancePctOfValue = +c.insurancePctOfValue;
-      if (c.annualMaintenance != null) merged.annualMaintenance = +c.annualMaintenance;
-      if (c.monthlyRefrendo != null) merged.monthlyRefrendo = +c.monthlyRefrendo;
-      if (c.dataPlan != null) merged.dataPlan = +c.dataPlan;
-      if (c.carWash != null) merged.carWash = +c.carWash;
-      if (c.carWashTips != null) merged.carWashTips = +c.carWashTips;
-      if (c.miscellaneous != null) merged.miscellaneous = +c.miscellaneous;
-      if (c.accessories != null) merged.accessories = +c.accessories;
-      if (c.repairReserveAnnual != null) merged.repairReserveAnnual = +c.repairReserveAnnual;
-      if (c.uberWearFactor != null) merged.uberWearFactor = +c.uberWearFactor;
-      if (c.uberKmPerTrip != null) merged.uberKmPerTrip = +c.uberKmPerTrip;
-      // Carga pública vs. casera (sólo aplica a eléctrico o híbrido enchufable).
-      if (c.publicChargeFraction != null) merged.publicChargeFraction = +c.publicChargeFraction;
-      if (c.publicChargePrice != null) merged.publicChargePrice = +c.publicChargePrice;
-    }
-    if (json.oneTime) {
-      const o = json.oneTime;
-      if (o.toxicologyReport != null) merged.toxicologyReport = +o.toxicologyReport;
-      if (o.uberCertification != null) merged.uberCertification = +o.uberCertification;
-      if (o.acquisitionFees != null) merged.acquisitionFees = +o.acquisitionFees;
-    }
-    if (json.uber) {
-      const u = json.uber;
-      if (u.taxRegime === 'resico' || u.taxRegime === 'gross' || u.taxRegime === 'net')
-        merged.taxRegime = u.taxRegime;
-      if (u.resicoRate != null) merged.resicoRate = +u.resicoRate;
-      if (u.uberCommission != null) merged.uberCommission = +u.uberCommission;
-      if (u.taxRate != null) merged.taxRate = +u.taxRate;
-    }
-    if (json.financing) {
-      const f = json.financing;
-      if (f.financeType === 'annuity' || f.financeType === 'balloon' || f.financeType === 'lease')
-        merged.financeType = f.financeType;
-      if (f.balloonPct != null) merged.balloonPct = +f.balloonPct;
-      if (f.leaseMonthly != null) merged.leaseMonthly = +f.leaseMonthly;
-      if (f.leaseDownPayment != null) merged.leaseDownPayment = +f.leaseDownPayment;
-      if (f.leaseTermMonths != null) merged.leaseTermMonths = +f.leaseTermMonths;
-      if (f.leaseKmCapYear != null) merged.leaseKmCapYear = +f.leaseKmCapYear;
-      if (f.leaseExcessKmFee != null) merged.leaseExcessKmFee = +f.leaseExcessKmFee;
-    }
-    if (json.projection) {
-      const p = json.projection;
-      if (p.depreciationMethod) merged.depreciationMethod = p.depreciationMethod;
-      if (p.depreciationRate != null) merged.depreciationRate = +p.depreciationRate;
-      if (p.firstYearDepreciation != null) merged.firstYearDepreciation = +p.firstYearDepreciation;
-      if (p.salesFactor != null) merged.salesFactor = +p.salesFactor;
-      if (p.sellingCostPct != null) merged.sellingCostPct = +p.sellingCostPct;
-      if (p.interestRate != null) merged.interestRate = +p.interestRate;
-      // Riesgo de pérdida total o robo (sólo lo usa el Monte Carlo).
-      if (p.theftLossProbAnnual != null) merged.theftLossProbAnnual = +p.theftLossProbAnnual;
-      if (p.theftDeductiblePct != null) merged.theftDeductiblePct = +p.theftDeductiblePct;
-    }
-    const sources = json.sources && typeof json.sources === 'object' ? json.sources : null;
-    return { ok: true, inputs: merged, sources };
-  } catch (e) {
-    return { ok: false, error: e.message };
+  if (!isPlainObject(json)) {
+    return {
+      ok: false,
+      error: 'se esperaba un objeto JSON con las secciones vehicle, costs, uber, etc.',
+    };
   }
+  const merged = { ...currentInputs };
+  const ignored = [];
+  for (const section of SECTIONS) {
+    if (json[section] != null && !isPlainObject(json[section])) ignored.push(section);
+  }
+  const sectionOf = (name) => (isPlainObject(json[name]) ? json[name] : null);
+  for (const [section, key, input, kind] of IMPORT_FIELDS) {
+    const raw = sectionOf(section)?.[key];
+    if (raw == null) continue;
+    const value = coerce(kind, input, raw);
+    if (value === undefined) ignored.push(`${section}.${key}`);
+    else merged[input] = value;
+  }
+  const vehicle = sectionOf('vehicle');
+  if (vehicle) {
+    merged.carPreset = 'custom';
+    // Sin garantía en el JSON, se infiere de la condición (usado 0 años, nuevo 3),
+    // igual que al elegir un preset.
+    if (vehicle.warrantyYearsRemaining == null) {
+      if (vehicle.condition === 'used') merged.warrantyYearsRemaining = 0;
+      else if (vehicle.condition === 'new') merged.warrantyYearsRemaining = 3;
+    }
+  }
+  const sources = isPlainObject(json.sources) ? json.sources : null;
+  return { ok: true, inputs: merged, sources, ignored };
+}
+
+/** Removes the Markdown code fences an LLM often wraps its JSON answer in. */
+export const stripCodeFences = (text) =>
+  String(text)
+    .replace(/```json\s*/g, '')
+    .replace(/```\s*$/g, '')
+    .trim();
+
+/**
+ * Parses the text pasted in the Import tab and applies it. Invalid JSON and a
+ * JSON that is not an object both return `{ ok: false, error }` with a message
+ * ready to show.
+ */
+export function importCaseText(text, currentInputs) {
+  let json;
+  try {
+    json = JSON.parse(stripCodeFences(text));
+  } catch (e) {
+    return { ok: false, error: `JSON inválido: ${e.message}` };
+  }
+  const result = applyImportedJson(json, currentInputs);
+  return result.ok ? result : { ok: false, error: `Error: ${result.error}` };
 }

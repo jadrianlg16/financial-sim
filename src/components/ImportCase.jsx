@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { FileText, Sparkles, Upload, Copy, FileJson, BrainCircuit, Receipt } from 'lucide-react';
 import { SOURCE_LABELS } from '../content/sources.js';
-import { applyImportedJson, buildAIPrompt } from '../domain/aiCase.js';
+import { buildAIPrompt, importCaseText } from '../domain/aiCase.js';
 
 // ============================================================================
 // PÁGINA: IMPORTAR / AI
@@ -33,29 +33,20 @@ export const ImportCase = ({ inputs, setInputs, sources, setSources }) => {
     });
   };
   const importJson = () => {
-    try {
-      const cleaned = jsonText
-        .replace(/```json\s*/g, '')
-        .replace(/```\s*$/g, '')
-        .trim();
-      const parsed = JSON.parse(cleaned);
-      const {
-        ok,
-        inputs: newInputs,
-        error,
-        sources: newSources,
-      } = applyImportedJson(parsed, inputs);
-      if (ok) {
-        setInputs(newInputs);
-        if (newSources) setSources(newSources);
-        setToast({
-          type: 'success',
-          msg: '¡Caso importado! Ve al Dashboard para visualizar. Las fuentes aparecen abajo.',
-        });
-      } else setToast({ type: 'error', msg: `Error: ${error}` });
-    } catch (e) {
-      setToast({ type: 'error', msg: `JSON inválido: ${e.message}` });
+    const result = importCaseText(jsonText, inputs);
+    if (!result.ok) {
+      setToast({ type: 'error', msg: result.error });
+      return;
     }
+    setInputs(result.inputs);
+    if (result.sources) setSources(result.sources);
+    const skipped = result.ignored.length
+      ? ` Se ignoraron valores no válidos: ${result.ignored.join(', ')}.`
+      : '';
+    setToast({
+      type: 'success',
+      msg: `¡Caso importado! Ve al Dashboard para visualizar. Las fuentes aparecen abajo.${skipped}`,
+    });
   };
   return (
     <div style={{ maxWidth: 880 }}>
