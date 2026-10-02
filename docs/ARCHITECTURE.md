@@ -11,25 +11,28 @@ your machine.
 ```text
 src/
   main.jsx            entry point — mounts <App/>
-  App.jsx             tab routing, top-level state, localStorage persistence
+  App.jsx             tab routing (each tab lazy-loaded), top-level state, localStorage persistence
   domain/             the financial model — pure JS, no React
   content/            user-facing copy (tips, glossary, source labels)
   components/         presentation
+    sidebar/          the side panel's input groups
+    report/           report sections, plus its text and Markdown builders (plain JS)
     ui/               reusable primitives (Field, Group, Info, Segmented)
   theme/              fonts + CSS custom properties
   storage/            localStorage read helpers
+test/                 Vitest suites for domain/ and report/reportText.js
 ```
 
 The dependency rule is one-directional:
 
 ```text
-components/ ──▶ domain/ ──▶ (nothing)
-     │              ▲
-     └──▶ content/ ─┘
+components/ ──▶ domain/   ──▶ (nothing outside domain/)
+     │
+     └────────▶ content/  ──▶ (nothing)
 ```
 
 `domain/` imports no React and never imports from `components/`. That is enforced
-by convention today and is easy to check:
+by convention and is easy to check:
 
 ```bash
 grep -l "from 'react'" src/domain/*.js     # expect no matches
@@ -45,16 +48,38 @@ a script, or a future server without dragging a rendering framework along.
 |---|---|
 | `constants.js` | Car presets, city presets, powertrain types, chart colors |
 | `defaults.js` | `DEFAULT_INPUTS` — the starting scenario |
+| `year.js` | `currentYear()` and `projectionYear()` — the only code that reads the clock |
 | `format.js` | MXN / number / percent formatters and numeric guards (`clamp`, `positive`, …) |
 | `finance.js` | Loan math: `pmt`, amortization tables (standard and balloon), `npv`, `irr`, `solvePeriodicRate`, `equivalentAnnualCost` |
-| `depreciation.js` | `effectiveDepRate`, `depreciatedValue` — resale value over the horizon |
+| `depreciation.js` | `effectiveDepRate`, `depreciatedValue` — resale value over the horizon, aged against the reference year |
 | `energy.js` | `calculateEnergyCost` — per-km energy cost across gasoline / diesel / hybrid / EV |
 | `calculate.js` | **The core model.** Takes one `inputs` object, returns the full result set consumed by every tab |
 | `sensitivity.js` | One-variable-at-a-time swings around the base case, measured on break-even trips (or on net project cost when there is no Uber income) |
-| `monteCarlo.js` | `randomNormal` + `runMonteCarlo` — repeats `calculate()` over randomized inputs (3,000 runs by default in the Monte Carlo tab, 800 for the report's risk band) |
-| `aiCase.js` | Builds the research prompt and validates/applies an imported JSON case |
-| `compare.js` | Helpers for the multi-car comparison (preset application, cloning, max cars) |
+| `monteCarlo.js` | `MC_VARIATIONS` (what varies and by how much), `randomNormal` and `runMonteCarlo` — repeats `calculate()` over randomized inputs (3,000 runs by default in the Monte Carlo tab, 800 for the report's risk band) |
+| `aiCase.js` | Builds the research prompt; parses, validates and applies an imported JSON case |
+| `compare.js` | Car-preset application (shared by the sidebar and the comparison tab), cloning, max cars |
 | `carDisplay.js` | Human-readable car name from inputs |
+
+### `calculate()`
+
+`calculate(inputs, { year })` runs eight named stages, each taking only what it
+needs from the earlier ones:
+
+| Stage | Produces |
+|---|---|
+| `financingStage` | Down payment, amount financed, loan / balloon / lease terms, PV and FV of the credit |
+| `operatingCostStage` | Energy and maintenance cost per km, fixed monthly costs, day-one cash |
+| `liquidationStage` | Market value at the horizon, sale price net of selling costs, live debt, terminal recovery |
+| `breakEvenStage` | Net contribution of one trip under the tax regime, trips per month to cover the plan |
+| `usageStage` | Kilometres, energy and maintenance implied by those trips |
+| `feasibilityStage` | Hours, trips per hour, EV range and charging time; the `feasible` flag |
+| `cashflowStage` | Year-by-year cash flow with inflation, repairs, payments, revenue and totals |
+| `economicsStage` | NPV, IRR, present value and EAC of ownership, TCO per year and per km, CAT, finance vs. cash |
+
+`calculate()` then returns the keys listed in `RESULT_KEYS`, in that order.
+`year` is the calendar year treated as "now" (projection year 1 and the reference
+for a used car's age); it defaults to `currentYear()`, and tests whose results
+depend on it pass it explicitly or fake the clock.
 
 `calculate()` is the hub: `App.jsx` calls it whenever the inputs change and hands
 the result to every tab, while `sensitivity`, `monteCarlo` and the comparison tab
@@ -83,7 +108,7 @@ Persistence touches `localStorage` in three places, and every access is wrapped 
 
 Explanatory copy lives in `content/`, not inline in components:
 
-- `tips.jsx` — the `?` tooltip text for every technical term
+- `tips.js` — the `?` tooltip text for every technical term
 - `glossary.js` — the Glossary tab's labels and sections
 - `sources.js` — labels for citation sources on an imported case
 
@@ -91,9 +116,34 @@ This split exists because the copy is the product here: the app's stated goal is
 that someone who does not know finance can still follow the reasoning. Editing an
 explanation should not mean touching a component.
 
+## Tests
+
+`npm test` runs Vitest in Node; nothing needs a browser or the network.
+
+- **Characterization snapshots** (`test/calculate.characterization.test.js`) pin the
+  complete output of `calculate()` for the seven input sets in
+  `test/fixtures/scenarios.js`, one JSON file per scenario under
+  `test/__snapshots__/calculate/`. `test/helpers/serialize.js` keeps key order and
+  spells out `NaN`, `±Infinity`, `-0` and `undefined`, which `JSON.stringify` would
+  lose, so a refactor that changes a single number, key or key order fails. The
+  fixtures carry their own copy of the default inputs, so editing
+  `DEFAULT_INPUTS` does not silently rewrite them. After an intended model change,
+  run `npx vitest run -u` and review the JSON diff.
+- **Unit tests** cover the finance functions, depreciation, `calculate()`'s internal
+  identities per mode, sensitivity, the reference year, the preset logic, the
+  import validation and the report's text builders.
+- **Determinism**: the year is passed explicitly (or the clock is faked), and the
+  Monte Carlo tests inject a seeded generator from `test/helpers/rng.js`.
+
+Lint (`npm run lint`, ESLint with React and React Hooks rules) and formatting
+(`npm run format:check`, Prettier) run alongside the tests in
+`.github/workflows/ci.yml`.
+
 ## History
 
 This codebase was originally a single 2,980-line `uber_car_simulator.jsx`. It was
-split into the modules above with no behavior change; the rationale comments that
-were attached to each section moved with their code, and the file-header
-requirements log became [REQUISITOS.md](REQUISITOS.md).
+split into the modules above with no behavior change, and the file-header
+requirements log became [REQUISITOS.md](REQUISITOS.md). Later, `calculate()` was
+divided into the stages above under the characterization snapshots, and the two
+largest components (the sidebar and the report) were split into the `sidebar/`
+and `report/` folders.
