@@ -14,7 +14,6 @@ import { calculate } from './domain/calculate.js';
 import { CAR_PRESETS, SCENARIO_COLORS, VEHICLE_TYPES } from './domain/constants.js';
 import { DEFAULT_INPUTS } from './domain/defaults.js';
 import { STORAGE_KEY, readPersisted } from './storage/persistence.js';
-import { FontsAndTheme } from './theme/FontsAndTheme.jsx';
 import { ErrorBoundary } from './components/ui/ErrorBoundary.jsx';
 
 // Each tab is its own chunk, loaded the first time it is opened, so the first
@@ -111,7 +110,6 @@ export default function App() {
   };
   return (
     <div className="app-root">
-      <FontsAndTheme />
       <div className="layout">
         <Sidebar inputs={inputs} setInputs={setInputs} onSave={handleSave} onReset={handleReset} />
         <main className="main">

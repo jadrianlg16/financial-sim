@@ -1,13 +1,15 @@
 import { clearPersisted } from '../storage/persistence.js';
 
-// Last-resort screen when the app itself fails to render. It cannot rely on the
-// app's theme (that is rendered by App), so it carries its own inline styles.
+// Last-resort screen when the app itself fails to render. It uses inline styles
+// rather than the app's classes; of theme.css only the global resets reach it
+// (border-box sizing, no body margin), so it keeps its own 8px side margins.
 export const CrashScreen = () => (
   <div
     role="alert"
     style={{
       fontFamily: 'system-ui, sans-serif',
-      maxWidth: 560,
+      width: 'calc(100% - 16px)',
+      maxWidth: 592,
       margin: '80px auto',
       padding: '0 16px',
       color: '#181410',

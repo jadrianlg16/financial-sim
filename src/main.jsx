@@ -11,6 +11,7 @@ import '@fontsource/manrope/700.css';
 import '@fontsource/jetbrains-mono/400.css';
 import '@fontsource/jetbrains-mono/500.css';
 import '@fontsource/jetbrains-mono/600.css';
+import './theme/theme.css';
 import App from './App.jsx';
 import { CrashScreen } from './components/CrashScreen.jsx';
 import { ErrorBoundary } from './components/ui/ErrorBoundary.jsx';
