@@ -46,13 +46,13 @@ It is for someone in Mexico deciding whether to buy a car (new or used, cash or 
 
 React 19, Vite 6, Recharts 2 and lucide-react, written in plain JavaScript (JSX) with no TypeScript. Vitest, ESLint 9 and Prettier for the checks.
 
-- **Static and client-only.** There is no backend. The build is a static bundle that nginx (see the `Dockerfile`) or any static host can serve, and your figures stay in your browser. The only third-party request the app itself makes is for three font families from Google Fonts.
+- **Static and client-only.** There is no backend. The build is a static bundle that nginx (see the `Dockerfile`) or any static host can serve, and your figures stay in your browser. The app makes no third-party requests: its fonts ship with it.
 - **The model is separate from the UI.** `src/domain/` is plain JavaScript with no React imports, and `src/components/` only presents what it returns. That keeps the math runnable outside a browser and is what the tests exercise. [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) has the layer map and the dependency rule.
 - **Time and randomness are inputs.** `src/domain/year.js` is the only code that reads the clock, and the Monte Carlo draws from an injectable random source. The app uses the real year and `Math.random`; tests pin both, so results are reproducible.
-- **Imported data is untrusted.** The LLM's JSON goes through a field table: option fields must hold a known value, numbers must be finite, text must be a string. Anything else is skipped rather than reaching the model (an unknown powertrain used to zero the fuel cost).
-- **Tabs load on demand.** Each tab is a lazy chunk, so the first download is the shell, the sidebar and the model (a 287 kB entry chunk instead of one 841 kB bundle). The default Dashboard still pulls the 383 kB charting chunk.
+- **Outside data is untrusted.** The LLM's JSON goes through a field table: option fields must hold a known value, numbers must be finite, text must be a string and is length-capped. Anything else is skipped rather than reaching the model (an unknown powertrain used to zero the fuel cost). Its `sources` keep only plain keys with string values (at most 100), and a source becomes a link only if it parses as an `http:` or `https:` URL, shown with its hostname. Saved state gets the same schema check on load, and the inputs that size the model's loops are capped (horizon 30 years, loan and lease terms 120 months) wherever they come from ([`src/domain/inputSchema.js`](src/domain/inputSchema.js)).
+- **Tabs load on demand.** Each tab is a lazy chunk, so the first download is the shell, the sidebar and the model (a 290 kB entry chunk instead of one 841 kB bundle). The default Dashboard still pulls the 383 kB charting chunk.
 - **The copy is separate from the code.** Tooltip, glossary and source-label text live in `src/content/`, because the explanations are the product for someone who doesn't know finance.
-- **Storage can't break the app.** Every `localStorage` read and write is wrapped in `try/catch` (`src/storage/persistence.js`, `src/App.jsx`, `src/components/Sidebar.jsx`), so private mode or full storage only loses persistence, never the calculation.
+- **Storage can't break the app.** Every `localStorage` access is wrapped in `try/catch` (`src/storage/persistence.js`, `src/App.jsx`, `src/components/Sidebar.jsx`), so private mode, full storage or a sandboxed iframe (where storage throws) only loses persistence, never the calculation. Saved state is schema-checked before use, and error boundaries turn a render error into a message with a way to clear the saved data instead of a blank page.
 
 ```text
 Sidebar inputs ──▶ App.jsx state ──▶ calculate(inputs) ──▶ result ──▶ every tab and chart
@@ -69,11 +69,11 @@ Sidebar inputs ──▶ App.jsx state ──▶ calculate(inputs) ──▶ res
 2. **Break-even solved per trip, consistent with kilometres.** Break-even trips are fixed monthly costs divided by the net contribution of one trip: fare, minus platform commission, minus tax under the chosen regime (RESICO, gross or net), minus energy and Uber-wear maintenance for that trip's km. Uber km are then derived from the resulting trips, so fuel and maintenance agree with the hours you must drive. A plan is only "feasible" if it fits your available hours, stays at or under 4 trips per hour and, for an EV, fits the battery range and charging time.
 3. **Finance math from first principles.** [`src/domain/finance.js`](src/domain/finance.js) has `pmt`, standard and balloon amortization, `npv`, an `irr` that uses bisection and returns `NaN` when the cash flows never change sign (rather than a meaningless rate), a rate solver for CAT, and equivalent annual cost for comparing cars over different horizons.
 4. **Reproducible Monte Carlo with a tail event.** [`src/domain/monteCarlo.js`](src/domain/monteCarlo.js) adds clamped normal noise (Box–Muller) to the 15 inputs in its `MC_VARIATIONS` table, which the Monte Carlo tab also renders, so the on-screen list cannot drift from the code. It models a total loss or theft with cumulative probability `1 − (1 − p)^years` and caps the insurance payout at the car's end-of-horizon market value, minus the deductible, so a write-off is never a windfall. Every draw goes through an injectable `rng`.
-5. **Tests that pin the whole model.** [`test/calculate.characterization.test.js`](test/calculate.characterization.test.js) stores the complete 125-key result of `calculate()` for seven input sets (every powertrain, new and used, cash, mixed, loan, balloon and lease, all three operation modes, an infinite break-even and a loan that outlives the horizon) as order-preserving JSON with `NaN`, `Infinity` and `-0` spelled out. They were captured before `calculate()` was split into stages and still match byte for byte. Unit tests cover the finance functions, depreciation, sensitivity, the seeded Monte Carlo, the import validation and the report text.
+5. **Tests that pin the whole model.** [`test/calculate.characterization.test.js`](test/calculate.characterization.test.js) stores the complete 125-key result of `calculate()` for seven input sets (every powertrain, new and used, cash, mixed, loan, balloon and lease, all three operation modes, an infinite break-even and a loan that outlives the horizon) as order-preserving JSON with `NaN`, `Infinity` and `-0` spelled out. They were captured before `calculate()` was split into stages and still match byte for byte. Unit tests cover the finance functions, depreciation, sensitivity, the seeded Monte Carlo, the input limits, the import and saved-state checks, and the report text and Markdown escaping.
 
 ## Getting started
 
-**Prerequisites:** Node.js 20.9+ or 22+ (see `engines` in `package.json`; verified with Node 20.10 and npm 10.5) and Git. Docker is optional; its build uses Node 20.
+**Prerequisites:** Node.js 20.9+ or 22+ (see `engines` in `package.json`; verified with Node 20.10 and npm 10.5) and Git. Docker is optional; its build uses Node 22.
 
 ```bash
 git clone https://github.com/jadrianlg16/financial-sim.git && cd financial-sim
@@ -88,7 +88,7 @@ npm run build      # static bundle in dist/
 npm run preview    # serves dist/ at http://127.0.0.1:4173
 ```
 
-Docker (multi-stage: builds on `node:20-alpine`, serves with `nginx:alpine`):
+Docker (multi-stage: builds on `node:22-alpine`, serves with `nginx:alpine` and the security headers in [`nginx/default.conf`](nginx/default.conf): a Content-Security-Policy limited to the app's own files, no cross-origin framing, no server version):
 
 ```bash
 docker build -t financial-sim .
@@ -118,7 +118,7 @@ npm run lint           # ESLint; any warning fails
 npm run format:check   # Prettier (npm run format rewrites)
 ```
 
-The tests cover the domain layer and the report's text builders, with no browser and no network. The characterization snapshots live in `test/__snapshots__/calculate/`, one JSON file per scenario. When a change to the model is intended, regenerate them with `npx vitest run -u` and review the JSON diff like any other change.
+The tests cover the domain layer, the saved-state checks and the report's text builders, with no browser and no network. The characterization snapshots live in `test/__snapshots__/calculate/`, one JSON file per scenario. When a change to the model is intended, regenerate them with `npx vitest run -u` and review the JSON diff like any other change.
 
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs `npm ci`, lint, the format check, the tests and the build on Ubuntu and Windows with Node 20 and 22. The workflow is written and every step passes locally, but it has not run on GitHub yet.
 
@@ -140,26 +140,28 @@ src/
 │   ├── sensitivity.js          one-at-a-time sensitivity (tornado)
 │   ├── monteCarlo.js           randomized runs, percentiles, histogram
 │   ├── aiCase.js               LLM research prompt and validated JSON import
+│   ├── inputSchema.js          allowed values, input limits, saved-state and sources checks
 │   ├── year.js                 the reference year (the only clock read)
 │   └── compare.js, carDisplay.js, constants.js, defaults.js, format.js
-├── components/                 one file per tab or panel
+├── components/                 one file per tab or panel, plus CrashScreen
 │   ├── sidebar/                the side panel's input groups
 │   ├── report/                 report sections and its text and Markdown builders
-│   └── ui/                     Field, Group, Info, Segmented
+│   └── ui/                     Field, Group, Info, Segmented, SourceCell, ErrorBoundary
 ├── content/                    tooltip, glossary and source-label copy (Spanish)
-├── storage/persistence.js      localStorage reads
-└── theme/FontsAndTheme.jsx     CSS variables and font import
+├── storage/persistence.js      localStorage access and the saved-state check
+└── theme/FontsAndTheme.jsx     CSS variables
 test/
 ├── *.test.js                   unit tests per module, plus the characterization test
 ├── __snapshots__/calculate/    full calculate() output per scenario (JSON)
 ├── fixtures/scenarios.js       the seven input sets
 └── helpers/                    lossless JSON serializer, seeded random generator
-public/favicon.svg
+public/                         favicon.svg, fonts-LICENSE.txt
 docs/
 ├── ARCHITECTURE.md             layers, dependency rule, state, tests
 ├── REQUISITOS.md               requirements log (Spanish)
 └── screenshot-*.png
 .github/workflows/ci.yml        lint, format check, tests and build
+nginx/default.conf              security headers for the Docker image
 Dockerfile                      build with Node, serve dist/ with nginx
 ```
 
@@ -178,7 +180,7 @@ It started as an engineering-economics course project (evaluate a car-purchase p
 
 Copyright © 2026 Adrián Gaona. All rights reserved. The source is public so it can be read and evaluated; no license is granted to reuse or redistribute it.
 
-Third-party components keep their own licenses: React, Recharts and Vite (MIT), lucide-react (ISC), and the Instrument Serif, Manrope and JetBrains Mono fonts loaded from Google Fonts (SIL Open Font License 1.1).
+Third-party components keep their own licenses: React, Recharts and Vite (MIT), lucide-react (ISC), and the Instrument Serif, Manrope and JetBrains Mono fonts, bundled from the Fontsource packages (SIL Open Font License 1.1; the license texts ship as `fonts-LICENSE.txt` from [`public/`](public/fonts-LICENSE.txt)).
 
 ## Author
 
