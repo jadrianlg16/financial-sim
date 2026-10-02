@@ -27,6 +27,7 @@ import { carDisplayName } from '../domain/carDisplay.js';
 import { MAX_COMPARE_CARS, applyCarPresetTo, cloneInputs } from '../domain/compare.js';
 import { CAR_PRESETS, SCENARIO_COLORS, VEHICLE_TYPES } from '../domain/constants.js';
 import { fmtMXN, fmtN, fmtPct, num } from '../domain/format.js';
+import { INPUT_LIMITS } from '../domain/inputSchema.js';
 import { projectionYear } from '../domain/year.js';
 
 // ============================================================================
@@ -361,6 +362,7 @@ export const Comparison = ({ saved, currentInputs, setSaved }) => {
                       max={84}
                       step={6}
                       onChange={(v) => setCarField(c.id, 'loanMonths', v)}
+                      limits={INPUT_LIMITS.loanMonths}
                       suffix="meses"
                     />
                     <Field
@@ -382,6 +384,7 @@ export const Comparison = ({ saved, currentInputs, setSaved }) => {
                 max={10}
                 step={1}
                 onChange={(v) => setCarField(c.id, 'horizonYears', v)}
+                limits={INPUT_LIMITS.horizonYears}
                 suffix="años"
               />
               {isUber && (

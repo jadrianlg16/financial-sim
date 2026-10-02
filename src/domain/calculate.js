@@ -9,6 +9,7 @@ import {
   solvePeriodicRate,
 } from './finance.js';
 import { clamp, nonNegative, num, positive } from './format.js';
+import { clampInput } from './inputSchema.js';
 import { currentYear, projectionYear } from './year.js';
 
 // ============================================================================
@@ -37,7 +38,8 @@ const USABLE_BATTERY_FRACTION = 0.9;
 /** Horizon, purchase split, loan or lease terms and the credit's present/future value. */
 function financingStage(I) {
   const carPrice = nonNegative(I.carPrice);
-  const years = Math.max(1, Math.round(positive(I.horizonYears, 1)));
+  // Horizon and terms are clamped to INPUT_LIMITS: they size the loops below.
+  const years = clampInput('horizonYears', Math.round(positive(I.horizonYears, 1)));
   const horizonMonths = years * 12;
   // Auto a cuenta (trade-in): actúa como enganche adicional, reduce lo financiado.
   const tradeInValue = Math.min(nonNegative(I.tradeInValue), carPrice);
@@ -72,9 +74,9 @@ function financingStage(I) {
   const interestRate = Math.max(-0.95, num(I.interestRate));
   // Plazo: en arrendamiento, el del contrato; en crédito, el del préstamo.
   const months = isLease
-    ? Math.max(1, Math.round(positive(I.leaseTermMonths, 1)))
+    ? clampInput('leaseTermMonths', Math.round(positive(I.leaseTermMonths, 1)))
     : financed > 0
-      ? Math.max(1, Math.round(positive(I.loanMonths, 1)))
+      ? clampInput('loanMonths', Math.round(positive(I.loanMonths, 1)))
       : 0;
   // Globo: fracción de lo financiado que no se amortiza y se paga al final.
   const balloonPct = isBalloon ? clamp(I.balloonPct, 0, 0.9) : 0;

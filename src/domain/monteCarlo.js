@@ -1,6 +1,7 @@
 import { calculate } from './calculate.js';
 import { depreciatedValue } from './depreciation.js';
 import { clamp, positive } from './format.js';
+import { clampInput } from './inputSchema.js';
 
 /**
  * Normal draw via Box–Muller. `rng` returns uniform numbers in [0, 1); it
@@ -126,7 +127,7 @@ export function runMonteCarlo(inputs, iterations = 3000, { rng = Math.random, ye
   // acumulada en N años es pTL = 1 − (1 − p)^N (acotada a [0, 0.95]).
   // En un arrendamiento no eres dueño del activo, así que el evento no cambia tu
   // recuperación terminal (ya es 0): se desactiva para no distorsionar la cola.
-  const horizonYears = Math.max(1, Math.round(positive(inputs.horizonYears, 1)));
+  const horizonYears = clampInput('horizonYears', Math.round(positive(inputs.horizonYears, 1)));
   const pAnnual = clamp(inputs.theftLossProbAnnual, 0, 0.5);
   const isLeaseMC = inputs.purchaseMode === 'credit' && inputs.financeType === 'lease';
   const totalLossProb =

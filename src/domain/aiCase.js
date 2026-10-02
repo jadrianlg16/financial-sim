@@ -1,3 +1,4 @@
+import { clampInput, isPlainObject, OPTIONS } from './inputSchema.js';
 import { currentYear } from './year.js';
 
 /**
@@ -122,19 +123,10 @@ Notas técnicas:
 Recuerda: SOLO el JSON, con una fuente por cada dato en "sources".`;
 }
 
-// Valores permitidos de cada campo de opción: un valor desconocido se ignora en vez
-// de colarse al modelo (p. ej. un tipo de motor desconocido daría costo de energía 0).
-const ALLOWED = {
-  vehicleType: ['gasoline', 'diesel', 'hybrid', 'electric'],
-  vehicleCondition: ['new', 'used'],
-  insuranceMode: ['fixed', 'pctOfValue'],
-  taxRegime: ['resico', 'gross', 'net'],
-  financeType: ['annuity', 'balloon', 'lease'],
-  depreciationMethod: ['declining', 'straight', 'realistic'],
-};
-
 // Campos que se aceptan del JSON: [sección, llave en el JSON, input, tipo]. Los
-// números deben ser finitos, los textos no vacíos y las opciones de ALLOWED.
+// números deben ser finitos (y dentro de INPUT_LIMITS), los textos no vacíos y
+// las opciones de OPTIONS: un valor desconocido se ignora en vez de colarse al
+// modelo (p. ej. un tipo de motor desconocido daría costo de energía 0).
 const IMPORT_FIELDS = [
   ['vehicle', 'name', 'carName', 'text'],
   ['vehicle', 'type', 'vehicleType', 'option'],
@@ -190,15 +182,14 @@ const IMPORT_FIELDS = [
   ['projection', 'theftDeductiblePct', 'theftDeductiblePct', 'number'],
 ];
 const SECTIONS = ['vehicle', 'costs', 'oneTime', 'uber', 'financing', 'projection'];
-const isPlainObject = (x) => x != null && typeof x === 'object' && !Array.isArray(x);
 
 // Convierte un valor del JSON al tipo del input; undefined si no es válido.
 const coerce = (kind, input, value) => {
   if (kind === 'boolean') return !!value;
   if (kind === 'text') return typeof value === 'string' && value ? value : undefined;
-  if (kind === 'option') return ALLOWED[input].includes(value) ? value : undefined;
+  if (kind === 'option') return OPTIONS[input].includes(value) ? value : undefined;
   const n = +value;
-  return Number.isFinite(n) ? n : undefined;
+  return Number.isFinite(n) ? clampInput(input, n) : undefined;
 };
 
 /**

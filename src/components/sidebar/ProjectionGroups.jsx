@@ -6,6 +6,7 @@ import { Segmented } from '../ui/Segmented.jsx';
 import { TIPS } from '../../content/tips.js';
 import { depreciatedValue, effectiveDepRate } from '../../domain/depreciation.js';
 import { fmtMXN, fmtPct } from '../../domain/format.js';
+import { INPUT_LIMITS } from '../../domain/inputSchema.js';
 
 // Supuestos financieros (tasa de oportunidad, inflación, reservas, riesgo de
 // pérdida total), proyección de valor y venta del auto, e ingreso opcional.
@@ -93,6 +94,7 @@ export const ProjectionGroups = ({ inputs, set, mode }) => {
           max={15}
           step={1}
           onChange={(v) => set('horizonYears', v)}
+          limits={INPUT_LIMITS.horizonYears}
           suffix="años"
         />
         {mode === 'advanced' && (

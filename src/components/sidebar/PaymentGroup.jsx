@@ -5,6 +5,7 @@ import { Info } from '../ui/Info.jsx';
 import { Segmented } from '../ui/Segmented.jsx';
 import { TIPS } from '../../content/tips.js';
 import { fmtMXN, fmtPct } from '../../domain/format.js';
+import { INPUT_LIMITS } from '../../domain/inputSchema.js';
 
 // Forma de pago: contado, crédito (tradicional, con pago final o arrendamiento) o
 // mixto, con enganche, tasa, plazo, auto a cuenta y gastos de adquisición.
@@ -145,6 +146,7 @@ export const PaymentGroup = ({ inputs, set, mode }) => {
               max={84}
               step={6}
               onChange={(v) => set('leaseTermMonths', v)}
+              limits={INPUT_LIMITS.leaseTermMonths}
               suffix="meses"
               info={TIPS.leaseTermMonths}
             />
@@ -208,6 +210,7 @@ export const PaymentGroup = ({ inputs, set, mode }) => {
                 max={84}
                 step={6}
                 onChange={(v) => set('loanMonths', v)}
+                limits={INPUT_LIMITS.loanMonths}
                 suffix="meses"
               />
               {mode === 'advanced' && (

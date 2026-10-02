@@ -7,6 +7,8 @@ import { Info } from './Info.jsx';
 //     rango del slider, y ese valor real es el que entra al cálculo.
 //   - El slider sirve para moverse rápido; si el valor queda fuera de su rango,
 //     el thumb se pinta en ámbar (clase out-of-range) como aviso.
+//   - `limits` ([mín, máx], opcional) acota lo que se puede escribir, para las
+//     variables que dimensionan el cálculo (ver INPUT_LIMITS).
 // ----------------------------------------------------------------------------
 export const Field = ({
   label,
@@ -19,6 +21,7 @@ export const Field = ({
   info,
   decimals = 0,
   suffix,
+  limits,
 }) => {
   const [focused, setFocused] = useState(false);
   const [draft, setDraft] = useState('');
@@ -30,7 +33,7 @@ export const Field = ({
       : String(Math.round(value * 1000) / 1000);
   const commit = () => {
     const n = parseFloat(draft.replace(/,/g, ''));
-    if (!isNaN(n)) onChange(n);
+    if (!isNaN(n)) onChange(limits ? Math.min(limits[1], Math.max(limits[0], n)) : n);
     setFocused(false);
   };
   return (
