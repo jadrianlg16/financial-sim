@@ -4,7 +4,12 @@
 // Saved state is untrusted: an older version or a hand edit can leave anything
 // there, so it is schema-checked before the app uses it.
 import { SCENARIO_COLORS } from '../domain/constants.js';
-import { isPlainObject, sanitizeInputs, TEXT_LIMITS } from '../domain/inputSchema.js';
+import {
+  isPlainObject,
+  sanitizeInputs,
+  sanitizeSources,
+  TEXT_LIMITS,
+} from '../domain/inputSchema.js';
 
 export const STORAGE_KEY = 'autopilot.v1';
 export const SIDEBAR_MODE_KEY = 'autopilot.sidebarMode';
@@ -49,7 +54,7 @@ export function sanitizePersisted(data) {
   return {
     inputs: sanitizeInputs(data.inputs),
     saved,
-    sources: isPlainObject(data.sources) ? data.sources : null,
+    sources: sanitizeSources(data.sources),
   };
 }
 

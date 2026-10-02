@@ -1,4 +1,4 @@
-import { SOURCE_LABELS } from '../../content/sources.js';
+import { SourceCell, sourceLabel } from '../ui/SourceCell.jsx';
 import { fmtMXN, fmtPct } from '../../domain/format.js';
 
 // Escenarios de liquidación, supuestos del análisis, fuentes de un caso importado
@@ -135,15 +135,9 @@ export const ReportAssumptions = ({ R, inputs, labels, sources }) => (
           <tbody>
             {Object.entries(sources).map(([k, v]) => (
               <tr key={k}>
-                <td style={{ fontFamily: 'Manrope', fontWeight: 500 }}>{SOURCE_LABELS[k] || k}</td>
+                <td style={{ fontFamily: 'Manrope', fontWeight: 500 }}>{sourceLabel(k)}</td>
                 <td style={{ wordBreak: 'break-all', fontSize: 11 }}>
-                  {typeof v === 'string' && v.startsWith('http') ? (
-                    <a href={v} target="_blank" rel="noreferrer" style={{ color: 'var(--accent)' }}>
-                      {v}
-                    </a>
-                  ) : (
-                    String(v)
-                  )}
+                  <SourceCell value={v} />
                 </td>
               </tr>
             ))}

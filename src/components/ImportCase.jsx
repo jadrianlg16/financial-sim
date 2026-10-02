@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { FileText, Sparkles, Upload, Copy, FileJson, BrainCircuit, Receipt } from 'lucide-react';
-import { SOURCE_LABELS } from '../content/sources.js';
+import { SourceCell, sourceLabel } from './ui/SourceCell.jsx';
 import { buildAIPrompt, importCaseText } from '../domain/aiCase.js';
+import { TEXT_LIMITS } from '../domain/inputSchema.js';
 
 // ============================================================================
 // PÁGINA: IMPORTAR / AI
@@ -43,9 +44,12 @@ export const ImportCase = ({ inputs, setInputs, sources, setSources }) => {
     const skipped = result.ignored.length
       ? ` Se ignoraron valores no válidos: ${result.ignored.join(', ')}.`
       : '';
+    const cut = result.trimmed.length
+      ? ` Se recortaron textos demasiado largos: ${result.trimmed.join(', ')}.`
+      : '';
     setToast({
       type: 'success',
-      msg: `¡Caso importado! Ve al Dashboard para visualizar. Las fuentes aparecen abajo.${skipped}`,
+      msg: `¡Caso importado! Ve al Dashboard para visualizar. Las fuentes aparecen abajo.${skipped}${cut}`,
     });
   };
   return (
@@ -156,28 +160,9 @@ export const ImportCase = ({ inputs, setInputs, sources, setSources }) => {
             <tbody>
               {Object.entries(sources).map(([k, v]) => (
                 <tr key={k}>
-                  <td style={{ fontFamily: 'Manrope', fontWeight: 500 }}>
-                    {SOURCE_LABELS[k] || k}
-                  </td>
+                  <td style={{ fontFamily: 'Manrope', fontWeight: 500 }}>{sourceLabel(k)}</td>
                   <td style={{ wordBreak: 'break-all', fontSize: 11 }}>
-                    {typeof v === 'string' && v.startsWith('http') ? (
-                      <a
-                        href={v}
-                        target="_blank"
-                        rel="noreferrer"
-                        style={{ color: 'var(--accent)' }}
-                      >
-                        {v}
-                      </a>
-                    ) : (
-                      <span
-                        style={{
-                          color: v && String(v).includes('[ESTIM') ? 'var(--warn)' : 'var(--muted)',
-                        }}
-                      >
-                        {String(v)}
-                      </span>
-                    )}
+                    <SourceCell value={v} highlightEstimates />
                   </td>
                 </tr>
               ))}
@@ -198,6 +183,7 @@ export const ImportCase = ({ inputs, setInputs, sources, setSources }) => {
         <textarea
           className="textarea"
           value={inputs.userNotes}
+          maxLength={TEXT_LIMITS.userNotes}
           onChange={(e) => setInputs((prev) => ({ ...prev, userNotes: e.target.value }))}
           placeholder={
             'Ej.\n- Precio: cotización agencia KIA Monterrey, 15-jun-2026.\n- Tasa 13.5%: simulador BBVA Auto.\n- Seguro $2,000/mes: cotización Qualitas cobertura amplia comercial.\n- Gasolina $24.5: promedio CRE Nuevo León.'

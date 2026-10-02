@@ -6,6 +6,7 @@ import { Segmented } from '../ui/Segmented.jsx';
 import { TIPS } from '../../content/tips.js';
 import { CITY_PRESETS } from '../../domain/constants.js';
 import { fmtPct } from '../../domain/format.js';
+import { TEXT_LIMITS } from '../../domain/inputSchema.js';
 
 // Operación en plataforma (ciudad, tarifa, comisión, régimen fiscal, horas) y
 // trámites únicos de alta. Sólo aparecen cuando el análisis incluye Uber.
@@ -53,6 +54,7 @@ export const UberGroups = ({ inputs, setInputs, set, mode }) => {
               className="input"
               type="text"
               value={inputs.cityName}
+              maxLength={TEXT_LIMITS.cityName}
               onChange={(e) => set('cityName', e.target.value)}
               placeholder="Escribe tu ciudad"
             />

@@ -76,3 +76,34 @@ export function sanitizeInputs(raw) {
   }
   return out;
 }
+
+/** Limits on the provenance table attached to an imported case. */
+export const SOURCE_LIMITS = { keys: 100, value: 500 };
+// A source key names an input ("price", "kmPerKwh"…): letters, digits and "_" only,
+// so keys like "__proto__" or "constructor" never reach a lookup table.
+const SOURCE_KEY = /^[A-Za-z][A-Za-z0-9_]{0,63}$/;
+
+/**
+ * Keeps the usable part of a `sources` object: string values under plain keys,
+ * at most SOURCE_LIMITS.keys entries of SOURCE_LIMITS.value characters each.
+ * Returns null when nothing usable is left.
+ */
+export function sanitizeSources(raw) {
+  if (!isPlainObject(raw)) return null;
+  const entries = Object.entries(raw)
+    .filter(([key, value]) => SOURCE_KEY.test(key) && typeof value === 'string' && value.trim())
+    .slice(0, SOURCE_LIMITS.keys)
+    .map(([key, value]) => [key, value.slice(0, SOURCE_LIMITS.value)]);
+  return entries.length ? Object.fromEntries(entries) : null;
+}
+
+/** The URL of a source if it is a valid http(s) link, otherwise null. */
+export function sourceUrl(value) {
+  if (typeof value !== 'string') return null;
+  try {
+    const url = new URL(value.trim());
+    return url.protocol === 'http:' || url.protocol === 'https:' ? url : null;
+  } catch {
+    return null;
+  }
+}

@@ -1,4 +1,11 @@
-import { clampInput, isPlainObject, OPTIONS } from './inputSchema.js';
+import {
+  clampInput,
+  isPlainObject,
+  OPTIONS,
+  sanitizeSources,
+  SOURCE_LIMITS,
+  TEXT_LIMITS,
+} from './inputSchema.js';
 import { currentYear } from './year.js';
 
 /**
@@ -194,12 +201,14 @@ const coerce = (kind, input, value) => {
 
 /**
  * Applies a parsed case JSON (the schema buildAIPrompt asks for) on top of the
- * current inputs. Only known fields are copied; numbers must be finite and
- * option fields must hold an allowed value. Anything else is left unchanged and
- * listed in `ignored` (as "section.key"). Never mutates `currentInputs`.
+ * current inputs. Only known fields are copied; numbers must be finite (and are
+ * clamped to INPUT_LIMITS) and option fields must hold an allowed value. Anything
+ * else is left unchanged and listed in `ignored` (as "section.key"). Text longer
+ * than TEXT_LIMITS is cut and listed in `trimmed`. `sources` keeps plain keys
+ * with string values, up to SOURCE_LIMITS. Never mutates `currentInputs`.
  *
- * @returns {{ ok: true, inputs: object, sources: object|null, ignored: string[] }
- *   | { ok: false, error: string }}
+ * @returns {{ ok: true, inputs: object, sources: object|null, ignored: string[],
+ *   trimmed: string[] } | { ok: false, error: string }}
  */
 export function applyImportedJson(json, currentInputs) {
   if (!isPlainObject(json)) {
@@ -210,6 +219,7 @@ export function applyImportedJson(json, currentInputs) {
   }
   const merged = { ...currentInputs };
   const ignored = [];
+  const trimmed = [];
   for (const section of SECTIONS) {
     if (json[section] != null && !isPlainObject(json[section])) ignored.push(section);
   }
@@ -218,8 +228,14 @@ export function applyImportedJson(json, currentInputs) {
     const raw = sectionOf(section)?.[key];
     if (raw == null) continue;
     const value = coerce(kind, input, raw);
-    if (value === undefined) ignored.push(`${section}.${key}`);
-    else merged[input] = value;
+    if (value === undefined) {
+      ignored.push(`${section}.${key}`);
+    } else if (kind === 'text' && value.length > TEXT_LIMITS[input]) {
+      merged[input] = value.slice(0, TEXT_LIMITS[input]);
+      trimmed.push(`${section}.${key}`);
+    } else {
+      merged[input] = value;
+    }
   }
   const vehicle = sectionOf('vehicle');
   if (vehicle) {
@@ -231,8 +247,18 @@ export function applyImportedJson(json, currentInputs) {
       else if (vehicle.condition === 'new') merged.warrantyYearsRemaining = 3;
     }
   }
-  const sources = isPlainObject(json.sources) ? json.sources : null;
-  return { ok: true, inputs: merged, sources, ignored };
+  const sources = sanitizeSources(json.sources);
+  if (isPlainObject(json.sources)) {
+    const given = Object.values(json.sources);
+    const dropped = given.length - (sources ? Object.keys(sources).length : 0);
+    if (dropped > 0) ignored.push(`sources (${dropped} omitidas)`);
+    if (given.some((v) => typeof v === 'string' && v.length > SOURCE_LIMITS.value)) {
+      trimmed.push('sources');
+    }
+  } else if (json.sources != null) {
+    ignored.push('sources');
+  }
+  return { ok: true, inputs: merged, sources, ignored, trimmed };
 }
 
 /** Removes the Markdown code fences an LLM often wraps its JSON answer in. */
@@ -242,12 +268,21 @@ export const stripCodeFences = (text) =>
     .replace(/```\s*$/g, '')
     .trim();
 
+// Una respuesta normal del LLM pesa unos pocos KB; esto deja margen de sobra.
+export const MAX_IMPORT_CHARS = 100000;
+
 /**
  * Parses the text pasted in the Import tab and applies it. Invalid JSON and a
  * JSON that is not an object both return `{ ok: false, error }` with a message
  * ready to show.
  */
 export function importCaseText(text, currentInputs) {
+  if (String(text).length > MAX_IMPORT_CHARS) {
+    return {
+      ok: false,
+      error: `El texto pegado es demasiado grande (máximo ${MAX_IMPORT_CHARS.toLocaleString('es-MX')} caracteres).`,
+    };
+  }
   let json;
   try {
     json = JSON.parse(stripCodeFences(text));
