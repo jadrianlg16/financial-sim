@@ -25,13 +25,15 @@ import { STORAGE_KEY, readPersisted } from './storage/persistence.js';
 import { FontsAndTheme } from './theme/FontsAndTheme.jsx';
 
 // ============================================================================
-// APP (router de páginas)  ·  Conecta las 7 pestañas pedidas por el usuario:
-// Dashboard · Comparar · Sensibilidad · Monte Carlo · Fórmulas · Importar/AI ·
-// Reporte. Mantiene el estado global de inputs, escenarios guardados y las
-// fuentes importadas. 'inputs' es la única fuente de verdad: cambiar cualquier
-// variable en el Sidebar recalcula R (useMemo) y actualiza todas las páginas.
+// APP
+// ----------------------------------------------------------------------------
+// Pestañas: Dashboard · Comparar · Sensibilidad · Monte Carlo · Fórmulas ·
+// Importar/AI · Reporte · Glosario. Guarda el estado global: inputs, escenarios
+// guardados y fuentes importadas. `inputs` es la única fuente de verdad: cambiar
+// cualquier variable en el panel lateral recalcula R (useMemo) y todas las
+// pestañas lo leen. El estado se guarda en localStorage para sobrevivir a una
+// recarga.
 // ============================================================================
-// Persistencia local: el estado sobrevive a recargar la página. (mejora #persist)
 export default function App() {
   const [persisted] = useState(readPersisted);
   const [inputs, setInputs] = useState(() =>

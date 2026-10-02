@@ -89,12 +89,12 @@ export const TIPS = {
     '<strong>Inflación general de costos.</strong> Cuánto suben al año el seguro, refrendo, mantenimiento y demás gastos (aparte del combustible, que tiene su propia inflación).',
   depreciationCost:
     '<strong>Costo por depreciación.</strong> Lo que el auto pierde de valor en el horizonte (precio − valor de reventa). Suele ser el costo más grande de tener un auto, aunque no lo "sientas" cada mes.',
-  // --- FEATURE 1: régimen fiscal Uber ---
+  // --- Régimen fiscal del ingreso Uber ---
   taxRegime:
     '<strong>Régimen fiscal del ingreso Uber.</strong> Cómo se calcula el impuesto de cada viaje.<br/><strong>RESICO (realista):</strong> la plataforma retiene un % pequeño del ingreso bruto (≈2.5%). Es lo que aplica a la mayoría de conductores en México hoy.<br/><strong>Bruto (escolar):</strong> % sobre la tarifa bruta del viaje (30% por defecto). Es el supuesto del problema/escuela; sobreestima mucho el impuesto.<br/><strong>Utilidad:</strong> el % se aplica sólo a la ganancia del viaje (tarifa − comisión − costo variable), no al bruto.',
   resicoRate:
     '<strong>Retención RESICO.</strong> Porcentaje que la plataforma retiene de tu ingreso BRUTO bajo el régimen simplificado (RESICO). En México la retención de plataformas digitales ronda 2.1% a 2.5% del ingreso.',
-  // --- FEATURE 2: tipo de financiamiento ---
+  // --- Tipo de financiamiento ---
   financeType:
     '<strong>Tipo de financiamiento.</strong> Cómo estructuras el crédito.<br/><strong>Tradicional:</strong> mensualidad fija que liquida todo el préstamo al final del plazo.<br/><strong>Pago final (globo):</strong> dejas un valor residual sin amortizar; la mensualidad baja, pero al final debes pagar el globo o refinanciarlo.<br/><strong>Arrendamiento:</strong> rentas el auto, NO eres dueño: no hay reventa ni depreciación a tu favor, pero la salida inicial y la mensualidad suelen ser menores.',
   balloonPct:
@@ -109,7 +109,7 @@ export const TIPS = {
     '<strong>Límite de km al año (arrendamiento).</strong> Kilometraje incluido en el contrato. Si manejas más (típico en Uber), cada km extra se cobra como penalización.',
   leaseExcessKmFee:
     '<strong>Cuota por km excedente.</strong> Lo que cobra el arrendador por cada kilómetro arriba del límite anual. Para uso intensivo (Uber) esta penalización puede ser fuerte.',
-  // --- FEATURE 3: seguro como % del valor ---
+  // --- Seguro como % del valor ---
   insuranceMode:
     '<strong>Cómo cobras el seguro.</strong><br/><strong>Monto fijo:</strong> una prima mensual plana que tú capturas.<br/><strong>% del valor:</strong> la prima anual es un porcentaje del valor del auto, así que BAJA cada año conforme el auto se deprecia (realista para cobertura amplia, donde la prima sigue el valor asegurado).',
   insurancePctOfValue:
@@ -128,5 +128,3 @@ export const TIPS = {
   theftDeductiblePct:
     '<strong>Deducible de cobertura amplia.</strong> Porcentaje del valor asegurado que NO te paga la aseguradora en caso de pérdida total (tú lo absorbes). En México la cobertura amplia suele tener deducibles de 3% a 10% para robo/pérdida total.',
 };
-
-// Nombre a mostrar del auto: usa el preset, o el nombre importado por IA si es custom. (audit fix)

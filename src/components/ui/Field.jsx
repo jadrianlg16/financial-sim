@@ -2,12 +2,11 @@ import { useState } from 'react';
 import { Info } from './Info.jsx';
 
 // ----------------------------------------------------------------------------
-// COMPONENTE Field  ·  Cumple la petición: "slider + campo manual editable"
-// "No elimines los sliders, sólo hazlos más flexibles." Cada campo tiene:
-//   - un input de texto donde se puede escribir CUALQUIER valor (incluso fuera
-//     del rango del slider), y ese valor real es el que se usa en los cálculos;
-//   - el slider para mover rápido; si el valor cae fuera del min/max del slider,
-//     el thumb se pinta en ámbar (clase out-of-range) como aviso visual.
+// Field: slider más campo manual editable.
+//   - En el campo de texto se puede escribir cualquier valor, incluso fuera del
+//     rango del slider, y ese valor real es el que entra al cálculo.
+//   - El slider sirve para moverse rápido; si el valor queda fuera de su rango,
+//     el thumb se pinta en ámbar (clase out-of-range) como aviso.
 // ----------------------------------------------------------------------------
 export const Field = ({
   label,

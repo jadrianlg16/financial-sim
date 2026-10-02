@@ -23,8 +23,8 @@ export function runMonteCarlo(inputs, iterations = 3000, { rng = Math.random, ye
   const normal = (mean, std) => randomNormal(mean, std, rng);
   const jitter = (val, pct, lo = -Infinity, hi = Infinity) =>
     Math.min(hi, Math.max(lo, normal(val, Math.abs(val) * pct)));
-  // FEATURE 3 — riesgo de pérdida total / robo (write-off) sobre el horizonte.
-  // Probabilidad anual p → acumulada en N años: pTL = 1−(1−p)^N (acotada [0,0.95]).
+  // Riesgo de pérdida total o robo en el horizonte: con probabilidad anual p, la
+  // acumulada en N años es pTL = 1 − (1 − p)^N (acotada a [0, 0.95]).
   // En un arrendamiento no eres dueño del activo, así que el evento no cambia tu
   // recuperación terminal (ya es 0): se desactiva para no distorsionar la cola.
   const horizonYears = Math.max(1, Math.round(positive(inputs.horizonYears, 1)));
@@ -64,7 +64,7 @@ export function runMonteCarlo(inputs, iterations = 3000, { rng = Math.random, ye
     const c = calculate(sim, { year });
     let finalPos = c.liquidationPosition;
     let net = c.netProjectResult;
-    // FEATURE 3 — ¿hubo pérdida total en esta iteración? (sólo si eres dueño)
+    // ¿Hubo pérdida total en esta iteración? (sólo si eres dueño)
     if (c.owned && totalLossProb > 0 && rng() < totalLossProb) {
       // Pago del seguro ≈ valor asegurado depreciado en un punto representativo del
       // horizonte (acotamos a NO superar el valor de mercado terminal, para que la
@@ -126,7 +126,7 @@ export function runMonteCarlo(inputs, iterations = 3000, { rng = Math.random, ye
       p90: q(netSorted, 0.9),
       mean: netSorted.reduce((a, b) => a + b, 0) / Math.max(1, netSorted.length),
     },
-    totalLossProb, // FEATURE 3 — prob. acumulada de pérdida total en el horizonte (la Report la muestra)
+    totalLossProb, // probabilidad acumulada de pérdida total en el horizonte
     hist,
     iterations,
   };

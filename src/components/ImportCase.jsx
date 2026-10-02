@@ -3,6 +3,15 @@ import { FileText, Sparkles, Upload, Copy, FileJson, BrainCircuit, Receipt } fro
 import { SOURCE_LABELS } from '../content/sources.js';
 import { applyImportedJson, buildAIPrompt } from '../domain/aiCase.js';
 
+// ============================================================================
+// PÁGINA: IMPORTAR / AI
+// ----------------------------------------------------------------------------
+// Paso 1: a partir del nombre de un auto genera un prompt que pide a un LLM un JSON
+// estricto con todas las variables y una fuente por dato (las estimaciones van
+// marcadas [ESTIMACIÓN]). Paso 2: el JSON pegado se valida y se aplica al
+// escenario actual; las fuentes se guardan y se muestran en una tabla que también
+// aparece en el Reporte. Al final, notas libres del usuario que viajan al Reporte.
+// ============================================================================
 export const ImportCase = ({ inputs, setInputs, sources, setSources }) => {
   const [carName, setCarName] = useState('');
   const [prompt, setPrompt] = useState('');
@@ -185,7 +194,7 @@ export const ImportCase = ({ inputs, setInputs, sources, setSources }) => {
           </table>
         </div>
       )}
-      {/* FEATURE 4 — notas y fuentes libres del usuario: fluyen al Reporte y se descargan en el .md */}
+      {/* Notas libres del usuario: aparecen en el Reporte y en el .md descargado */}
       <div className="card">
         <div className="card-title">
           <Receipt size={11} /> Notas y fuentes
@@ -208,25 +217,3 @@ export const ImportCase = ({ inputs, setInputs, sources, setSources }) => {
     </div>
   );
 };
-
-// ============================================================================
-// PÁGINA: REPORTE  ·  Objetivos solicitados por el usuario
-// ----------------------------------------------------------------------------
-// Entregable académico del problema (Actividades 1-A a 1-D):
-//   - Portada/intro, conclusiones narrativas siguiendo la plantilla del problema,
-//     y tabla resumen con todos los números clave.
-//   - Act. 1-B: mostrar VP, VF y el "costo del dinero" (VF − VP) diferenciados.
-//   - Act. 1-C: punto de equilibrio + intensidad (días/sem, horas/día, horas/sem).
-//     El usuario pidió explícitamente que las HORAS POR SEMANA aparezcan en la
-//     pantalla final ("recuerda las instrucciones especificaron...").
-//   - Act. 1-D: depreciación, valor de rescate y los 3 escenarios de liquidación
-//     (crédito pagado / venta cubre saldo / venta NO cubre saldo = déficit).
-// Peticiones posteriores integradas aquí:
-//   - TODAS las variables nuevas deben verse en el reporte: seguro mensual,
-//     refrendo, lavado, propinas, misceláneos, y los pagos iniciales únicos
-//     (toxicológico + certificación) como desembolso de una sola vez.
-//   - Desglose de gasto total del horizonte + costo neto del proyecto.
-//   - Si se importó un auto con IA, listar la TABLA DE FUENTES (una liga por dato)
-//     para poder verificar que la info viene de fuentes reputables.
-//   - Si el usuario llenó su ingreso mensual (opcional), mostrar qué % se va al auto.
-// ============================================================================

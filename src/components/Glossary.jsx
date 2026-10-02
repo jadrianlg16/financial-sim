@@ -2,6 +2,14 @@ import { HelpCircle } from 'lucide-react';
 import { GLOSSARY_LABELS, GLOSSARY_SECTIONS } from '../content/glossary.js';
 import { TIPS } from '../content/tips.jsx';
 
+// ============================================================================
+// PÁGINA: GLOSARIO
+// ----------------------------------------------------------------------------
+// Las mismas explicaciones de los tooltips "?" (TIPS) reunidas para leerlas de
+// corrido. GLOSSARY_LABELS da una etiqueta legible a cada término y
+// GLOSSARY_SECTIONS los agrupa por tema; un término que no esté en ninguna sección
+// cae en "Otros", así ninguna definición se pierde.
+// ============================================================================
 export const humanizeSlug = (k) =>
   k
     .replace(/([A-Z])/g, ' $1')

@@ -3,16 +3,11 @@ import { Info } from './ui/Info.jsx';
 import { fmtMXN, fmtPct } from '../domain/format.js';
 
 // ============================================================================
-// BLOQUE: IMPACTO EN EL INGRESO  ·  Objetivos solicitados por el usuario
+// BLOQUE: IMPACTO EN EL INGRESO
 // ----------------------------------------------------------------------------
-// Petición: "Agrega un campo OPCIONAL para ingreso mensual. Si lo llena, calcula
-// qué % de su ingreso se iría a: mensualidad, seguro, gasolina/diésel/electricidad,
-// mantenimiento, desgaste, costos totales mensuales y costo total del proyecto.
-// Muéstralo en una gráfica sencilla (% del ingreso al auto, ingreso vs costo
-// mensual, distribución de gastos como % del ingreso). NO debe ser obligatorio:
-// si no lo llena, el sistema sigue funcionando normalmente."
-//   - Si monthlyIncome <= 0 → retorna null (no estorba, todo lo demás funciona).
-//   - Semáforo de salud financiera (regla 20-30% del ingreso).
+// Qué parte del ingreso mensual se lleva el auto, en total y por categoría, con
+// un semáforo según la regla común del 20–30% del ingreso. El ingreso es
+// opcional: si no se captura (monthlyIncome <= 0) el bloque no se muestra.
 // ============================================================================
 export const IncomeImpact = ({ R, inputs }) => {
   if (!inputs.monthlyIncome || inputs.monthlyIncome <= 0) return null;

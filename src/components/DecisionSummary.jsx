@@ -4,39 +4,18 @@ import { TIPS } from '../content/tips.jsx';
 import { fmtFixed, fmtMXN, fmtN, fmtPct } from '../domain/format.js';
 
 // ============================================================================
-// PÁGINA: DASHBOARD  ·  Objetivos solicitados por el usuario
+// BLOQUE: RESUMEN DE DECISIÓN DE COMPRA
 // ----------------------------------------------------------------------------
-// Es la pantalla principal de resultados. Reúne las metas de varias peticiones:
-//   - Veredicto claro arriba: ¿es viable / pesado / inviable / sólo costo?
-//   - Perfiles de usuario que debe atender: "comprar auto nuevo y pagarlo con
-//     Uber en tiempo libre", "comprar usado", "ya tengo auto y quiero saber
-//     cuánto me cuesta", "usar mi carro viejo", "no quiero Uber, sólo ver
-//     depreciación y costo de tenerlo", "cuánto de mi ingreso se va al carro".
-//   - KPIs con tooltips (ícono ? al hover) que explican en lenguaje simple:
-//     mensualidad, VF, VP, costo del dinero, costo mensual total, punto de
-//     equilibrio, depreciación, costo total del proyecto y resultado final.
-//   - Bloque "Impacto en tu ingreso" (sólo si el usuario llenó su ingreso,
-//     campo OPCIONAL): % del sueldo que se va al auto, barra de distribución,
-//     y desglose por categoría. Si no llena ingreso, todo sigue funcionando.
-//   - Act. 1-A: tabla de clasificación contable Fijo/Variable × Directo/Indirecto.
-//   - Gráficas de largo plazo: amortización, estructura mensual de costos,
-//     GASTO TOTAL ACUMULADO por categoría (incluye desembolso inicial y todas
-//     las variables nuevas), y valor del auto vs deuda.
-//   - Tooltips de ayuda piden poco espacio: ícono con hover, no texto fijo.
-// ============================================================================
-// ============================================================================
-// BLOQUE: RESUMEN DE DECISIÓN DE COMPRA  ·  Valor real (no escolar)
-// ----------------------------------------------------------------------------
-// Las cifras que de verdad mueven una decisión de compra de auto, con ingeniería
-// económica seria: TCO, costo por km, CAE (comparador justo entre horizontes),
-// valor presente del costo, costo por depreciación, CAT y financiar-vs-contado.
-// Funciona en TODOS los modos; brilla en "Sin Uber" (sólo quiero comprar un auto).
+// Las cifras que mueven una decisión de compra, con ingeniería económica: TCO,
+// costo por km, CAE (compara autos con horizontes distintos), valor presente del
+// costo, costo por depreciación, CAT y financiar contra contado. Aplica en todos
+// los modos, incluido "Sin Uber".
 // ============================================================================
 export const DecisionSummary = ({ R, inputs }) => {
   const financed = R.financed > 0;
   const fvc = R.financeVsCashPV;
-  // Titular en lenguaje sencillo (FEATURE B): una sola frase que resume la conclusión,
-  // construida desde R y consciente de lease / Uber. Se antepone a las tarjetas KPI.
+  // Titular en lenguaje sencillo: una sola frase que resume la conclusión, construida
+  // desde R y consciente de arrendamiento y Uber. Va antes de las tarjetas KPI.
   const headline = (() => {
     const costoTxt = R.isLease
       ? `Rentar este auto te cuesta ~${fmtMXN(R.monthlyTotalOperative)} al mes`

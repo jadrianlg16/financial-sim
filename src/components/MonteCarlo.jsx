@@ -6,6 +6,14 @@ import { TIPS } from '../content/tips.jsx';
 import { fmtMXN, fmtN, fmtPct } from '../domain/format.js';
 import { runMonteCarlo } from '../domain/monteCarlo.js';
 
+// ============================================================================
+// PÁGINA: MONTE CARLO
+// ----------------------------------------------------------------------------
+// Repite el cálculo miles de veces variando al azar los valores inciertos para
+// estimar la probabilidad de que el plan funcione. Muestra P10/P50/P90 de viajes,
+// liquidación y resultado neto, y el histograma del punto de equilibrio. La lista
+// en pantalla de lo que varía debe coincidir con runMonteCarlo().
+// ============================================================================
 export const MonteCarlo = ({ inputs }) => {
   const [results, setResults] = useState(null);
   const [running, setRunning] = useState(false);
@@ -143,17 +151,3 @@ export const MonteCarlo = ({ inputs }) => {
     </>
   );
 };
-
-// ============================================================================
-// PÁGINA: FÓRMULAS  ·  Objetivos solicitados por el usuario
-// ----------------------------------------------------------------------------
-// Petición: "Quiero poder ver las fórmulas utilizadas en el front."
-//   - Mostrar TODAS las ecuaciones del simulador con los valores actuales ya
-//     sustituidos, para auditar de dónde sale cada número y para el reporte.
-//   - Incluye: mensualidad (anualidad), VP, VF, costo del dinero, depreciación
-//     lineal por tasa anual, ganancia neta/viaje, punto de equilibrio,
-//     intensidad de trabajo (horas), inflación de combustible (P_n=P_0(1+i)^n),
-//     costo total del proyecto / resultado final, y tiempo de carga (EV/híbrido enchufable).
-//   - Nota de accesibilidad: el usuario pidió "seguir usando lenguaje técnico
-//     pero con explicaciones" → cada fórmula trae su "donde..." en lenguaje simple.
-// ============================================================================

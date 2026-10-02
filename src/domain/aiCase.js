@@ -1,12 +1,12 @@
 import { currentYear } from './year.js';
 
-// ----------------------------------------------------------------------------
-// buildAIPrompt  ·  Petición: generar un prompt para que una IA investigue un
-// auto nuevo y devuelva un JSON ESTRUCTURADO con TODAS las variables, y que
-// CITE UNA FUENTE POR CADA DATO en el bloque "sources" (fabricante, AMDA, INEGI,
-// Profeco, CFE, aseguradoras, Uber MX, etc.). Las estimaciones se marcan
-// [ESTIMACIÓN]. Así el usuario puede verificar que la info está respaldada.
-// ----------------------------------------------------------------------------
+/**
+ * Prompt que pide a un LLM investigar un auto y devolver un JSON con un esquema
+ * fijo que cubre todas las variables, con una fuente por dato en "sources"
+ * (fabricante, AMDA, INEGI, Profeco, CFE, aseguradoras, Uber MX...). Las
+ * estimaciones se marcan [ESTIMACIÓN] para que el usuario pueda verificar cada
+ * cifra en lugar de confiar en el modelo. `year` es el año de ejemplo del esquema.
+ */
 export function buildAIPrompt(carName, year = currentYear()) {
   return `Eres un investigador financiero. Necesito datos VERIFICADOS y con FUENTE para evaluar la viabilidad de un auto en plataforma Uber en México.
 
@@ -128,7 +128,7 @@ export function applyImportedJson(json, currentInputs) {
     if (json.vehicle) {
       const v = json.vehicle;
       merged.carPreset = 'custom';
-      if (v.name) merged.carName = v.name; // guardar nombre real del auto importado (audit fix)
+      if (v.name) merged.carName = v.name; // el nombre real del auto importado
       if (v.type) merged.vehicleType = v.type;
       if (v.plugInHybrid != null) merged.plugInHybrid = !!v.plugInHybrid;
       if (v.price != null) merged.carPrice = +v.price;
@@ -139,8 +139,8 @@ export function applyImportedJson(json, currentInputs) {
       if (v.chargerPowerKw != null) merged.chargerPowerKw = +v.chargerPowerKw;
       if (v.condition === 'used' || v.condition === 'new') merged.vehicleCondition = v.condition;
       if (v.odometerKm != null) merged.odometerKm = +v.odometerKm;
-      // FEATURE 1 — depreciación de usados y garantía. Si el JSON no trae garantía,
-      // se infiere de la condición (usado=0, nuevo=3) para mantener la semántica.
+      // Depreciación de usados y garantía. Si el JSON no trae garantía, se infiere de
+      // la condición (usado 0 años, nuevo 3), igual que al elegir un preset.
       if (v.usedDepreciationRate != null) merged.usedDepreciationRate = +v.usedDepreciationRate;
       if (v.warrantyYearsRemaining != null)
         merged.warrantyYearsRemaining = +v.warrantyYearsRemaining;
@@ -165,7 +165,7 @@ export function applyImportedJson(json, currentInputs) {
       if (c.repairReserveAnnual != null) merged.repairReserveAnnual = +c.repairReserveAnnual;
       if (c.uberWearFactor != null) merged.uberWearFactor = +c.uberWearFactor;
       if (c.uberKmPerTrip != null) merged.uberKmPerTrip = +c.uberKmPerTrip;
-      // FEATURE 2 — split de carga pública vs. casera (sólo relevante para eléctrico/enchufable).
+      // Carga pública vs. casera (sólo aplica a eléctrico o híbrido enchufable).
       if (c.publicChargeFraction != null) merged.publicChargeFraction = +c.publicChargeFraction;
       if (c.publicChargePrice != null) merged.publicChargePrice = +c.publicChargePrice;
     }
@@ -202,7 +202,7 @@ export function applyImportedJson(json, currentInputs) {
       if (p.salesFactor != null) merged.salesFactor = +p.salesFactor;
       if (p.sellingCostPct != null) merged.sellingCostPct = +p.sellingCostPct;
       if (p.interestRate != null) merged.interestRate = +p.interestRate;
-      // FEATURE 3 — riesgo de pérdida total / robo (afecta el Monte Carlo).
+      // Riesgo de pérdida total o robo (sólo lo usa el Monte Carlo).
       if (p.theftLossProbAnnual != null) merged.theftLossProbAnnual = +p.theftLossProbAnnual;
       if (p.theftDeductiblePct != null) merged.theftDeductiblePct = +p.theftDeductiblePct;
     }

@@ -29,6 +29,14 @@ import { CAR_PRESETS, SCENARIO_COLORS, VEHICLE_TYPES } from '../domain/constants
 import { fmtMXN, fmtN, fmtPct, num } from '../domain/format.js';
 import { projectionYear } from '../domain/year.js';
 
+// ============================================================================
+// PÁGINA: COMPARAR
+// ----------------------------------------------------------------------------
+// De dos a cuatro autos editables lado a lado, cada uno con su propio calculate()
+// en vivo, más los escenarios guardados como columnas de sólo lectura. Abajo se
+// decide con un veredicto (CAE y $/km), una tabla que resalta el mejor valor de
+// cada fila de costo y la posición acumulada por año (incluye venta − deuda).
+// ============================================================================
 export const Comparison = ({ saved, currentInputs, setSaved }) => {
   // Cada auto editable = { id, inputs }. Semilla: 2 copias profundas del sidebar actual.
   const [cars, setCars] = useState(() =>
@@ -605,15 +613,3 @@ export const Comparison = ({ saved, currentInputs, setSaved }) => {
     </>
   );
 };
-
-// ============================================================================
-// PÁGINA: SENSIBILIDAD  ·  Objetivos solicitados por el usuario
-// ----------------------------------------------------------------------------
-// Parte del alcance "Completo: + Monte Carlo + sensibilidad + multi-carro".
-// Petición de claridad: explicar en lenguaje simple qué hace este análisis.
-//   - Muestra QUÉ variables mueven más el punto de equilibrio si suben/bajan,
-//     para que el usuario sepa dónde poner atención (tornado chart).
-//   - Verde a la izquierda = baja la variable, necesitas menos viajes (mejor).
-//     Rojo a la derecha = sube la variable, necesitas más viajes (peor).
-//   - Incluye seguro, mantenimiento y misceláneos (variables nuevas agregadas).
-// ============================================================================

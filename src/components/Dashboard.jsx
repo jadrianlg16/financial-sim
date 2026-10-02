@@ -23,6 +23,17 @@ import { TIPS } from '../content/tips.jsx';
 import { fmtFixed, fmtMXN, fmtN, fmtPct } from '../domain/format.js';
 import { projectionYear } from '../domain/year.js';
 
+// ============================================================================
+// PÁGINA: DASHBOARD
+// ----------------------------------------------------------------------------
+// Pantalla principal de resultados: el veredicto (viable, pesado, inviable o sólo
+// costo), el resumen de decisión de compra, el impacto en el ingreso (sólo si se
+// capturó), los KPIs del crédito y del proyecto con su explicación en un tooltip,
+// y las gráficas de largo plazo: amortización, estructura mensual de costos, gasto
+// acumulado por categoría (incluye el desembolso inicial) y valor del auto contra
+// la deuda. Una tabla clasifica cada costo como fijo o variable y directo o
+// indirecto.
+// ============================================================================
 export const Dashboard = ({ R, inputs }) => {
   const cashflowChart = R.cashflow.map((r) => ({
     year: r.year,

@@ -1,21 +1,10 @@
 import { CAR_PRESETS } from './constants.js';
 import { currentYear } from './year.js';
 
-// ============================================================================
-// PÁGINA: COMPARAR  ·  Objetivos solicitados por el usuario
-// ----------------------------------------------------------------------------
-// Peticiones (perfiles de usuario): "Quiero comparar diferentes tipos de carros",
-// "Quiero saber qué auto me conviene más", y del alcance original: comparar
-// múltiples escenarios lado a lado con líneas sobrepuestas y tabla de diferencias.
-//   - Cada escenario guardado es una configuración COMPLETA de variables.
-//   - Gráfica de utilidad acumulada por escenario (líneas sobrepuestas).
-//   - Tabla comparativa: mensual, equilibrio, hrs/sem, costo del proyecto y
-//     resultado final, para decidir cuál opción conviene.
-//   - "Actual" siempre se compara contra los guardados sin necesidad de guardarlo.
-// ============================================================================
-// Aplica un preset de auto a un objeto de inputs (versión mínima en línea de la
-// lógica del Sidebar: precio/kmpl/tipo/condición + ajustes típicos de usado). No
-// muta: devuelve un nuevo objeto. (FEATURE A)
+// Aplica un preset de auto a un objeto de inputs: precio, rendimiento, motor,
+// condición, año y garantía, más los ajustes típicos de un usado (reserva de
+// reparaciones, tasa). No muta: devuelve un objeto nuevo. Lo usan el panel lateral
+// y cada columna de la pestaña Comparar.
 export function applyCarPresetTo(prev, k) {
   if (k === 'custom') return { ...prev, carPreset: 'custom' };
   const c = CAR_PRESETS[k];
@@ -46,13 +35,3 @@ export function applyCarPresetTo(prev, k) {
 }
 export const cloneInputs = (i) => JSON.parse(JSON.stringify(i));
 export const MAX_COMPARE_CARS = 4;
-
-// ----------------------------------------------------------------------------
-// FEATURE A — comparar autos lado a lado, EDITABLES en la misma pestaña.
-// Antes había que salir de la pestaña, cambiar el sidebar y "Guardar escenario"
-// por cada auto (con pérdida y poco obvio). Ahora se sostienen 2–4 autos en
-// columnas compactas editables, se recalcula calculate() en vivo por columna, y
-// abajo se decide con tabla (mejor por fila) + veredicto (CAE y $/km) + gráfica.
-// Los escenarios guardados (props saved/setSaved) siguen disponibles como
-// columnas de SÓLO LECTURA, y se puede "cargar la config actual del sidebar".
-// ----------------------------------------------------------------------------

@@ -2,13 +2,13 @@ import { Wallet, AlertTriangle, CheckCircle2, Battery } from 'lucide-react';
 import { fmtFixed, fmtMXN, fmtN } from '../domain/format.js';
 
 // ============================================================================
-// BLOQUE: VEREDICTO  ·  Objetivos solicitados por el usuario
+// BLOQUE: VEREDICTO
 // ----------------------------------------------------------------------------
-// Resumen de una línea, en lenguaje simple, que responde la pregunta central:
-// "¿conviene o no?". Cubre los 3 modos de operación que pidió el usuario:
-//   - Sin Uber  → cuánto cuesta tener el auto + resultado final.
-//   - Uber      → viable / viable-pero-pesado / inviable (no alcanzan las horas).
-//   - Respeta el supuesto del problema: máx 4 viajes/hora (avisa si se excede).
+// Resumen de una línea, en lenguaje simple, que responde "¿conviene o no?":
+//   - Sin Uber → cuánto cuesta tener el auto y el resultado final.
+//   - Uber     → viable / viable pero pesado / inviable, y por qué (pérdida por
+//                viaje, autonomía o carga del EV, horas insuficientes, o más de
+//                4 viajes por hora, que no es realista).
 // ============================================================================
 export const Verdict = ({ R, inputs }) => {
   if (!R.isUberMode) {

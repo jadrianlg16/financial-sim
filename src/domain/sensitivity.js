@@ -1,5 +1,9 @@
 import { calculate } from './calculate.js';
 
+/**
+ * Variables que mueve el análisis de sensibilidad y cuánto (±delta). Las de
+ * energía dependen del motor, y sin Uber se omiten las del ingreso por viaje.
+ */
 export function buildSensKeys(inputs) {
   const keys = [
     { key: 'avgFare', label: 'Tarifa por viaje', delta: 0.2, uberOnly: true },
@@ -36,6 +40,10 @@ export function buildSensKeys(inputs) {
   return inputs.operationMode === 'no-uber' ? keys.filter((k) => !k.uberOnly) : keys;
 }
 
+/**
+ * Cambia cada variable ±delta por separado y mide el punto de equilibrio (o el
+ * costo neto del proyecto sin Uber); devuelve las variables ordenadas por impacto.
+ */
 export function sensitivity(inputs, { year } = {}) {
   const uber = inputs.operationMode !== 'no-uber';
   // En modo Uber medimos el punto de equilibrio; sin Uber, el costo neto del proyecto.

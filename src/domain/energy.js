@@ -6,10 +6,9 @@ export function calculateEnergyCost(I, monthlyKm, yearOffset = 0) {
   const electricityInflation = Math.max(-0.95, num(I.electricityInflation));
   const fuelInflated = nonNegative(I.fuelPrice) * Math.pow(1 + fuelInflation, yearOffset);
   const dieselInflated = nonNegative(I.dieselPrice) * Math.pow(1 + fuelInflation, yearOffset);
-  // FEATURE 2 — split de carga pública vs. casera para el manejo eléctrico.
-  // Una fracción de la energía se carga en estaciones públicas (más caras). El
-  // precio efectivo mezcla casa y público; ambos siguen la misma inflación
-  // eléctrica (consistente). Sólo aplica a eléctrico / híbrido enchufable.
+  // Carga pública vs. casera: una fracción de la energía se carga en estaciones
+  // públicas (más caras). El precio efectivo mezcla ambos y los dos siguen la misma
+  // inflación eléctrica. Sólo aplica a eléctrico o híbrido enchufable.
   const elecHomeInflated =
     nonNegative(I.electricityPrice) * Math.pow(1 + electricityInflation, yearOffset);
   const publicFrac = clamp(I.publicChargeFraction, 0, 1);

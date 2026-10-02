@@ -3,6 +3,13 @@ import { Sliders, Sparkles } from 'lucide-react';
 import { fmtMXN, fmtN } from '../domain/format.js';
 import { sensitivity } from '../domain/sensitivity.js';
 
+// ============================================================================
+// PÁGINA: SENSIBILIDAD
+// ----------------------------------------------------------------------------
+// Gráfica tornado: cuánto se mueve el punto de equilibrio (o el costo neto, sin
+// Uber) cuando cada variable sube o baja por separado, ordenadas de mayor a menor
+// impacto. Verde = el cambio ayuda; rojo = perjudica.
+// ============================================================================
 export const Sensitivity = ({ inputs }) => {
   const data = useMemo(() => sensitivity(inputs), [inputs]);
   const maxAbs = Math.max(...data.map((d) => Math.max(Math.abs(d.low), Math.abs(d.high))));
@@ -118,17 +125,3 @@ export const Sensitivity = ({ inputs }) => {
     </>
   );
 };
-
-// ============================================================================
-// PÁGINA: MONTE CARLO  ·  Objetivos solicitados por el usuario
-// ----------------------------------------------------------------------------
-// Alcance original elegido: "Completo: + Monte Carlo + sensibilidad + multi-carro".
-// Petición de claridad posterior: explicar en términos fáciles QUÉ es Monte Carlo,
-// PARA QUÉ sirve y QUÉ se simula realmente (sin tecnicismos sin explicar).
-//   - Repite el cálculo miles de veces variando al azar los valores inciertos
-//     (tarifa, combustible, comisión Uber, mantenimiento, seguro, depreciación,
-//     viajes/hora) para estimar la PROBABILIDAD de que el plan funcione (riesgo).
-//   - Reporta probabilidad de éxito, P10/P50/P90 de viajes y de resultado final,
-//     e histograma de distribución del punto de equilibrio.
-//   - El card-blurb lista textualmente qué variable se mueve y cuánto.
-// ============================================================================

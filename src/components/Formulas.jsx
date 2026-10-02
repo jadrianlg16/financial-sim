@@ -2,6 +2,16 @@ import { effectiveDepRate } from '../domain/depreciation.js';
 import { fmtFixed, fmtMXN, fmtN, fmtPct } from '../domain/format.js';
 import { projectionYear } from '../domain/year.js';
 
+// ============================================================================
+// PÁGINA: FÓRMULAS
+// ----------------------------------------------------------------------------
+// Cada ecuación del simulador con los valores actuales sustituidos, para auditar
+// de dónde sale cada número: anualidad (más globo y arrendamiento), VP, VF, costo
+// del dinero, depreciación, contribución por viaje, punto de equilibrio,
+// intensidad de trabajo, inflación, costo y resultado neto, VPN, TIR, CAE, CAT,
+// financiar vs. contado, $/km, seguro como % del valor, y carga y autonomía del
+// EV. Cada fórmula explica sus términos en lenguaje simple.
+// ============================================================================
 export const Formulas = ({ R, inputs }) => {
   const i = inputs.interestRate / 12;
   const n = R.months;
@@ -12,7 +22,7 @@ export const Formulas = ({ R, inputs }) => {
       : dm === 'realistic'
         ? 'realista (caída 1er año + saldo decreciente)'
         : 'saldo decreciente (geométrico)';
-  // FEATURE 1(a) — tasa de depreciación EFECTIVA (usados deprecian más lento y se afina con la edad).
+  // Tasa de depreciación efectiva: un usado deprecia más lento y se afina con la edad.
   const isUsedCar = inputs.vehicleCondition === 'used';
   const effDepRate = effectiveDepRate(inputs);
   return (

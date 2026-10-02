@@ -24,11 +24,11 @@ export const VehicleGroup = ({ inputs, setInputs, set, mode }) => {
         if (!prev.repairReserveAnnual) next.repairReserveAnnual = 6000; // los usados sí tienen reparaciones
         if (prev.depreciationMethod === 'straight') next.depreciationMethod = 'declining';
         if (prev.interestRate <= 0.135) next.interestRate = 0.16; // crédito de usado suele ser más caro
-        next.warrantyYearsRemaining = 0; // FEATURE 1(b): usado sin garantía
+        next.warrantyYearsRemaining = 0; // un usado ya no tiene garantía de fábrica
       } else {
         if (prev.repairReserveAnnual === 6000) next.repairReserveAnnual = 0;
         next.odometerKm = 0;
-        next.warrantyYearsRemaining = 3; // FEATURE 1(b): nuevo con garantía
+        next.warrantyYearsRemaining = 3; // un nuevo trae 3 años de garantía
       }
       return next;
     });

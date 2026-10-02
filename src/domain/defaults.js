@@ -22,8 +22,8 @@ export const DEFAULT_INPUTS = {
   interestRate: 0.135,
   loanMonths: 48,
   openingFeePct: 0.02,
-  // Tipo de financiamiento (FEATURE 2). 'annuity' = crédito tradicional (default, comportamiento previo).
-  // 'balloon' = crédito con pago final/residual. 'lease' = arrendamiento (sin propiedad).
+  // Tipo de financiamiento: 'annuity' = crédito tradicional, 'balloon' = crédito con
+  // pago final (residual), 'lease' = arrendamiento (sin propiedad).
   financeType: 'annuity',
   balloonPct: 0.35,
   leaseMonthly: 6500,
@@ -38,9 +38,9 @@ export const DEFAULT_INPUTS = {
   avgFare: 140,
   uberCommission: 0.25,
   taxRate: 0.3,
-  // Régimen fiscal del ingreso Uber (FEATURE 1). 'resico' es el NUEVO DEFAULT (realista):
-  // retención de plataforma ~2.5% del ingreso bruto. 'gross' = supuesto escolar (30% del bruto).
-  // 'net' = impuesto sobre la utilidad por viaje (usa taxRate).
+  // Régimen fiscal del ingreso Uber: 'resico' (default, realista) = retención de
+  // plataforma de ~2.5% del ingreso bruto; 'gross' = taxRate sobre la tarifa bruta
+  // (supuesto simplificado); 'net' = taxRate sobre la utilidad por viaje.
   taxRegime: 'resico',
   resicoRate: 0.025,
   tripsPerHour: 3,
@@ -54,16 +54,16 @@ export const DEFAULT_INPUTS = {
   electricityPrice: 4.2,
   fuelInflation: 0.06,
   electricityInflation: 0.04,
-  // Split de carga pública vs. casera (FEATURE 2). Sólo afecta eléctrico / híbrido enchufable.
-  // publicChargeFraction=0.15: 15% de la energía se carga en estaciones públicas (más caras).
+  // Carga pública vs. casera (sólo eléctrico o híbrido enchufable): 15% de la
+  // energía se carga en estaciones públicas, más caras que la tarifa doméstica.
   publicChargeFraction: 0.15,
   publicChargePrice: 8.0,
   monthlyInsurance: 2000,
   annualMaintenance: 8000,
   monthlyRefrendo: 500,
   dataPlan: 400,
-  // Modo de seguro (FEATURE 3). 'fixed' = monto plano (default). 'pctOfValue' = % anual del
-  // valor depreciado del auto (baja con la depreciación; realista para cobertura amplia).
+  // Seguro: 'fixed' = monto mensual plano; 'pctOfValue' = % anual del valor
+  // depreciado del auto (baja con la depreciación, como en una cobertura amplia).
   insuranceMode: 'fixed',
   insurancePctOfValue: 0.045,
   carWash: 800,
@@ -76,17 +76,17 @@ export const DEFAULT_INPUTS = {
   depreciationRate: 0.2,
   salesFactor: 1.0,
   monthlyIncome: 0,
-  // FEATURE 4 — notas y fuentes libres del usuario (de dónde salieron precios,
-  // cotizaciones y tasas). Fluyen al Reporte; persisten vía el effect de App.
+  // Notas libres del usuario (de dónde salieron precios, cotizaciones y tasas).
+  // Aparecen en el Reporte y se guardan con el resto de los inputs.
   userNotes: '',
-  // --- Ingeniería económica y variables de decisión (nuevas) ---
+  // --- Ingeniería económica y variables de decisión ---
   vehicleCondition: 'new',
   odometerKm: 0,
-  // FEATURE 1(a) — tasa de depreciación para USADOS (más lenta en % que un auto nuevo).
+  // Tasa de depreciación de un usado (más lenta en % que la de un auto nuevo).
   usedDepreciationRate: 0.12,
-  // FEATURE 1(b) — años de garantía restantes. Mientras y ≤ este valor, las reparaciones
-  // mayores las cubre el fabricante y la reserva de reparaciones se suprime. Nuevos: 3; usados: 0
-  // (lo ajustan applyCondition/applyCarPreset según la condición).
+  // Años de garantía restantes: mientras dure, las reparaciones mayores las cubre el
+  // fabricante y la reserva de reparaciones de ese año es 0. Nuevos: 3; usados: 0
+  // (los ajusta el panel lateral al cambiar la condición o el preset).
   warrantyYearsRemaining: 3,
   depreciationMethod: 'declining',
   firstYearDepreciation: 0.25,
@@ -97,7 +97,7 @@ export const DEFAULT_INPUTS = {
   tradeInValue: 0, // auto a cuenta
   acquisitionFees: 0, // placas/alta/ISAN/revisión/traspaso
   sellingCostPct: 0, // costo de venta al liquidar
-  // FEATURE 3 — riesgo de pérdida total / robo (write-off) modelado en Monte Carlo.
+  // Riesgo de pérdida total o robo, modelado sólo en el Monte Carlo.
   theftLossProbAnnual: 0.015, // prob. anual de pérdida total
   theftDeductiblePct: 0.05, // deducible de cobertura amplia (% del valor asegurado)
 };
