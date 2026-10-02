@@ -1,5 +1,3 @@
-import { irr, npv } from '../domain/finance.js';
-
 export const GLOSSARY_LABELS = {
   // Financiamiento y crédito
   monthlyPayment: 'Mensualidad',

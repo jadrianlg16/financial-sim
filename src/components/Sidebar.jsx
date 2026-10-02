@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   Car,
   MapPin,
@@ -55,7 +55,9 @@ export const Sidebar = ({ inputs, setInputs, onReset, onSave }) => {
     setMode(m);
     try {
       localStorage.setItem('autopilot.sidebarMode', m);
-    } catch {}
+    } catch {
+      /* almacenamiento no disponible: el modo sólo dura esta sesión */
+    }
   };
   const set = (k, v) => setInputs((prev) => ({ ...prev, [k]: v }));
   const applyCarPreset = (k) => {

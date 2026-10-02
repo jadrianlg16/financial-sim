@@ -1,9 +1,9 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { FileText, AlertTriangle, CheckCircle2, Download } from 'lucide-react';
 import { SOURCE_LABELS } from '../content/sources.js';
 import { carDisplayName } from '../domain/carDisplay.js';
 import { CITY_PRESETS, VEHICLE_TYPES } from '../domain/constants.js';
-import { fmtFixed, fmtMXN, fmtN, fmtPct, num } from '../domain/format.js';
+import { fmtFixed, fmtMXN, fmtN, fmtPct } from '../domain/format.js';
 import { runMonteCarlo } from '../domain/monteCarlo.js';
 
 export const Report = ({ R, inputs, sources }) => {
@@ -62,7 +62,9 @@ export const Report = ({ R, inputs, sources }) => {
   const handlePrint = () => {
     try {
       window.print();
-    } catch {}
+    } catch {
+      /* algunos navegadores embebidos no permiten imprimir: no hay alternativa */
+    }
   };
 
   // --- RECOMENDACIÓN (veredicto de asesor, no narrativa escolar) ------------
@@ -171,7 +173,6 @@ Para evaluar el proyecto en ${city}, consideramos costos mensuales operativos de
 ${R.isUberMode ? `Con una tarifa promedio por viaje de ${fmtMXN(R.grossPerTrip)}, descontando comisión Uber de ${fmtMXN(R.platformCommission, 2)} e impuestos sobre tarifa bruta de ${fmtMXN(R.taxAmountPerTrip, 2)}, obtenemos un ingreso neto antes de km de ${fmtMXN(R.netPerTrip, 2)} y una contribución por viaje de ${fmtMXN(R.netContributionPerTrip, 2)} después de combustible/mantenimiento. El equilibrio operativo simple sería ${fmtN(R.operatingBreakEvenTrips, 0)} viajes/mes; para que el proyecto completo se pague solo se agrega una recuperación mensual de ${fmtMXN(R.projectRecoveryMonthly)} y el objetivo queda en ${fmtN(R.breakEvenTrips, 0)} viajes/mes, ${operationDesc}.` : `Bajo el modo de uso personal, no hay punto de equilibrio que calcular: simplemente cargamos el costo total mensual al usuario.`}
 
 A lo largo de ${inputs.horizonYears} años, el gasto bruto total del proyecto suma ${fmtMXN(R.totalSpentGross)}; al final se recupera ${fmtMXN(R.terminalRecovery)} (valor de venta ${fmtMXN(R.actualSalePrice)} menos la deuda viva ${fmtMXN(R.remainingDebt)}), por lo que el costo neto del proyecto es ${fmtMXN(R.totalProjectCost)}${R.isUberMode ? ` y, sumando los ingresos de Uber, el resultado neto del proyecto es ${fmtMXN(R.netProjectResult)}` : ''}. Al final del año ${yearEnd}, ${escenario}`;
-  const months = inputs.horizonYears * 12;
   // Desglose con TOTALES reales del horizonte (ya con inflación y reserva de
   // reparaciones), tomados de los acumulados del último año del flujo.
   const last = R.cashflow[R.cashflow.length - 1] || {};

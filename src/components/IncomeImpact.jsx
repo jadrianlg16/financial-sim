@@ -1,4 +1,3 @@
-import React from 'react';
 import { PiggyBank } from 'lucide-react';
 import { Info } from './ui/Info.jsx';
 import { fmtMXN, fmtPct } from '../domain/format.js';

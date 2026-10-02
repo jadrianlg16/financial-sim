@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import {
   BarChart3,
   FileText,
@@ -33,7 +33,7 @@ import { FontsAndTheme } from './theme/FontsAndTheme.jsx';
 // ============================================================================
 // Persistencia local: el estado sobrevive a recargar la página. (mejora #persist)
 export default function App() {
-  const persisted = useRef(readPersisted()).current;
+  const [persisted] = useState(readPersisted);
   const [inputs, setInputs] = useState(() =>
     persisted?.inputs ? { ...DEFAULT_INPUTS, ...persisted.inputs } : DEFAULT_INPUTS,
   );
@@ -73,7 +73,9 @@ export default function App() {
     colorIdx.current = 0;
     try {
       localStorage.removeItem(STORAGE_KEY);
-    } catch {}
+    } catch {
+      /* almacenamiento no disponible: no hay nada que borrar */
+    }
   };
   return (
     <div className="app-root">
@@ -133,7 +135,7 @@ export default function App() {
           </div>
           {tab === 'dashboard' && <Dashboard R={R} inputs={inputs} />}
           {tab === 'compare' && (
-            <Comparison saved={saved} current={R} currentInputs={inputs} setSaved={setSaved} />
+            <Comparison saved={saved} currentInputs={inputs} setSaved={setSaved} />
           )}
           {tab === 'sens' && <Sensitivity inputs={inputs} />}
           {tab === 'mc' && <MonteCarlo inputs={inputs} />}

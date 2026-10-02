@@ -1,5 +1,3 @@
-import { irr, npv } from '../domain/finance.js';
-
 export const TIPS = {
   monthlyPayment: 'La mensualidad es lo que pagas cada mes al banco hasta terminar el crédito.',
   vp: '<strong>Valor Presente (VP).</strong> Cuánto valdría hoy todo el dinero que vas a pagar en el futuro. El dinero a futuro vale menos que el de hoy.',

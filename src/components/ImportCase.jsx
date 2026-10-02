@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { FileText, Sparkles, Upload, Copy, FileJson, BrainCircuit, Receipt } from 'lucide-react';
-import { Dashboard } from './Dashboard.jsx';
 import { SOURCE_LABELS } from '../content/sources.js';
 import { applyImportedJson, buildAIPrompt } from '../domain/aiCase.js';
 

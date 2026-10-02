@@ -1,4 +1,3 @@
-import React from 'react';
 import {
   LineChart,
   Line,
@@ -21,7 +20,7 @@ import { IncomeImpact } from './IncomeImpact.jsx';
 import { Verdict } from './Verdict.jsx';
 import { Info } from './ui/Info.jsx';
 import { TIPS } from '../content/tips.jsx';
-import { fmtFixed, fmtMXN, fmtN, fmtPct, num } from '../domain/format.js';
+import { fmtFixed, fmtMXN, fmtN, fmtPct } from '../domain/format.js';
 
 export const Dashboard = ({ R, inputs }) => {
   const cashflowChart = R.cashflow.map((r) => ({

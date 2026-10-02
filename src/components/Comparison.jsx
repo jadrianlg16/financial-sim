@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import {
   LineChart,
   Line,
@@ -28,11 +28,13 @@ import { MAX_COMPARE_CARS, applyCarPresetTo, cloneInputs } from '../domain/compa
 import { CAR_PRESETS, SCENARIO_COLORS, VEHICLE_TYPES } from '../domain/constants.js';
 import { fmtMXN, fmtN, fmtPct, num } from '../domain/format.js';
 
-export const Comparison = ({ saved, current, currentInputs, setSaved }) => {
+export const Comparison = ({ saved, currentInputs, setSaved }) => {
   // Cada auto editable = { id, inputs }. Semilla: 2 copias profundas del sidebar actual.
-  const idSeq = useRef(0);
+  const [cars, setCars] = useState(() =>
+    ['c0', 'c1'].map((id) => ({ id, inputs: cloneInputs(currentInputs) })),
+  );
+  const idSeq = useRef(2);
   const mkCar = (inputs) => ({ id: `c${idSeq.current++}`, inputs: cloneInputs(inputs) });
-  const [cars, setCars] = useState(() => [mkCar(currentInputs), mkCar(currentInputs)]);
 
   const setCarField = (id, k, v) =>
     setCars((cs) => cs.map((c) => (c.id === id ? { ...c, inputs: { ...c.inputs, [k]: v } } : c)));

@@ -1,4 +1,3 @@
-import React from 'react';
 import { Wallet, AlertTriangle, CheckCircle2, Battery } from 'lucide-react';
 import { fmtFixed, fmtMXN, fmtN } from '../domain/format.js';
 

@@ -1,8 +1,6 @@
-import React from 'react';
 import { Calculator } from 'lucide-react';
 import { Info } from './ui/Info.jsx';
 import { TIPS } from '../content/tips.jsx';
-import { npv } from '../domain/finance.js';
 import { fmtFixed, fmtMXN, fmtN, fmtPct } from '../domain/format.js';
 
 // ============================================================================

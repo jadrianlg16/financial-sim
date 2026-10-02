@@ -1,4 +1,3 @@
-import React from 'react';
 import { effectiveDepRate } from '../domain/depreciation.js';
 import { fmtFixed, fmtMXN, fmtN, fmtPct } from '../domain/format.js';
 

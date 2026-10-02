@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import { useMemo } from 'react';
 import { Sliders, Sparkles } from 'lucide-react';
 import { fmtMXN, fmtN } from '../domain/format.js';
 import { sensitivity } from '../domain/sensitivity.js';

@@ -1,4 +1,3 @@
-import React from 'react';
 import { HelpCircle } from 'lucide-react';
 import { GLOSSARY_LABELS, GLOSSARY_SECTIONS } from '../content/glossary.js';
 import { TIPS } from '../content/tips.jsx';

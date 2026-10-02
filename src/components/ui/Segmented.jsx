@@ -1,5 +1,3 @@
-import React from 'react';
-
 export const Segmented = ({ options, value, onChange }) => (
   <div className="seg">
     {options.map((o) => (
