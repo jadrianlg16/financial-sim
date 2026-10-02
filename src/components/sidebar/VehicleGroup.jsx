@@ -4,6 +4,7 @@ import { Group } from '../ui/Group.jsx';
 import { Info } from '../ui/Info.jsx';
 import { Segmented } from '../ui/Segmented.jsx';
 import { TIPS } from '../../content/tips.jsx';
+import { applyCarPresetTo } from '../../domain/compare.js';
 import { CAR_PRESETS } from '../../domain/constants.js';
 import { fmtN, fmtPct } from '../../domain/format.js';
 import { currentYear } from '../../domain/year.js';
@@ -13,38 +14,7 @@ import { powertrainOf } from './powertrain.js';
 // Elegir un preset o cambiar entre nuevo y usado ajusta supuestos típicos
 // (garantía, reserva de reparaciones, tasa) sin pisar valores ya editados.
 export const VehicleGroup = ({ inputs, setInputs, set, mode }) => {
-  const applyCarPreset = (k) => {
-    if (k === 'custom') {
-      setInputs((prev) => ({ ...prev, carPreset: 'custom' }));
-      return;
-    }
-    const c = CAR_PRESETS[k];
-    setInputs((prev) => {
-      const next = {
-        ...prev,
-        carPreset: k,
-        carPrice: c.price,
-        kmpl: c.kmpl || prev.kmpl,
-        vehicleType: c.type,
-        plugInHybrid: !!c.plugInHybrid,
-        kmPerKwh: c.kmPerKwh || prev.kmPerKwh,
-        batteryCapacityKwh: c.batteryCapacityKwh || prev.batteryCapacityKwh,
-      };
-      const cond = c.condition || 'new';
-      next.vehicleCondition = cond;
-      next.carYear = c.year || currentYear();
-      next.odometerKm = c.odometerKm || 0;
-      // FEATURE 1(b) — garantía: usados sin garantía (0), nuevos con 3 años.
-      next.warrantyYearsRemaining = cond === 'used' ? 0 : 3;
-      if (cond === 'used') {
-        if (!prev.repairReserveAnnual) next.repairReserveAnnual = 6000;
-        if (prev.interestRate <= 0.135) next.interestRate = 0.16;
-      } else if (prev.repairReserveAnnual === 6000) {
-        next.repairReserveAnnual = 0;
-      }
-      return next;
-    });
-  };
+  const applyCarPreset = (k) => setInputs((prev) => applyCarPresetTo(prev, k));
   // Cambiar entre nuevo/usado ajusta supuestos típicos (sólo si siguen en su default,
   // para no pisar valores que el usuario ya editó a mano).
   const applyCondition = (cond) =>

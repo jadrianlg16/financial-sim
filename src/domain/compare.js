@@ -34,6 +34,8 @@ export function applyCarPresetTo(prev, k) {
   next.vehicleCondition = cond;
   next.carYear = c.year || currentYear();
   next.odometerKm = c.odometerKm || 0;
+  // Los usados ya no tienen garantía de fábrica; los nuevos traen 3 años.
+  next.warrantyYearsRemaining = cond === 'used' ? 0 : 3;
   if (cond === 'used') {
     if (!prev.repairReserveAnnual) next.repairReserveAnnual = 6000;
     if (prev.interestRate <= 0.135) next.interestRate = 0.16;
