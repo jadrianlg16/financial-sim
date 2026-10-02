@@ -493,7 +493,7 @@ export const Dashboard = ({ R, inputs }) => {
           <Info text="<strong>Fijo:</strong> mismo monto sin importar cuánto uses el auto.<br/><strong>Variable:</strong> depende de cuánto manejes.<br/><strong>Directo:</strong> esencial para operar.<br/><strong>Indirecto:</strong> de apoyo." />
         </div>
         <div className="card-blurb">
-          Clasificación estándar de contabilidad, pedida en la Actividad 1-A.
+          Clasificación contable estándar de cada costo: fijo o variable, directo o indirecto.
         </div>
         <table className="tbl">
           <thead>

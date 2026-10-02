@@ -75,7 +75,7 @@ Esquema EXACTO:
     "monthlyInsurance": "URL aseguradora — si lo usarás en Uber cotiza póliza COMERCIAL (más cara)",
     "insuranceMode": "fixed si das un monto plano; pctOfValue si la prima es % del valor del auto (cobertura amplia)",
     "insurancePctOfValue": "[ESTIMACIÓN] prima anual como % del valor (cobertura amplia 3-6%) si insuranceMode=pctOfValue",
-    "taxRegime": "resico (realista: retención de plataforma), gross (escolar: % de tarifa bruta), o net (% sobre utilidad)",
+    "taxRegime": "resico (realista: retención de plataforma), gross (simplificado: % de tarifa bruta), o net (% sobre utilidad)",
     "resicoRate": "URL/Hacienda — retención RESICO de plataformas digitales (~2.1-2.5% del ingreso bruto)",
     "financeType": "annuity (crédito normal), balloon (pago final/residual), o lease (arrendamiento)",
     "balloonPct": "[ESTIMACIÓN] valor residual del plan de agencia si financeType=balloon (típico 0.25-0.45)",
@@ -93,7 +93,7 @@ Esquema EXACTO:
     "uberKmPerTrip": "[ESTIMACIÓN] km promedio por viaje incl. traslado vacío (típico 6-12)",
     "publicChargeFraction": "[ESTIMACIÓN] fracción de carga en estaciones públicas si es eléctrico/enchufable (0-0.3)",
     "publicChargePrice": "URL/estimación precio por kWh en cargadores públicos (suele superar la tarifa CFE doméstica)",
-    "depreciationMethod": "declining para autos (saldo decreciente); straight sólo si lo pide la tarea",
+    "depreciationMethod": "declining para autos (saldo decreciente); straight sólo si quieres depreciación lineal",
     "depreciationRate": "URL guía de depreciación / valor seminuevos (15-25% típico)",
     "firstYearDepreciation": "[ESTIMACIÓN] caída del 1er año si method=realistic (autos nuevos ~20-25%)",
     "salesFactor": "[ESTIMACIÓN] ajuste de reventa frente al valor calculado 0.7-1.1",
@@ -116,7 +116,7 @@ Notas técnicas:
 - monthlyInsurance, monthlyRefrendo, dataPlan, carWash, carWashTips, miscellaneous, accessories son MENSUALES.
 - annualMaintenance es ANUAL.
 - toxicologyReport y uberCertification son pagos ÚNICOS (una sola vez).
-- "uber.taxRegime": usa "resico" salvo que sea un caso escolar (entonces "gross"). leaseMonthly/leaseDownPayment sólo si financeType="lease".
+- "uber.taxRegime": usa "resico" salvo que quieras el supuesto simplificado (entonces "gross"). leaseMonthly/leaseDownPayment sólo si financeType="lease".
 - "costs.insuranceMode": usa "pctOfValue" sólo si cotizaste el seguro como porcentaje del valor; si no, "fixed" con monthlyInsurance.
 
 Recuerda: SOLO el JSON, con una fuente por cada dato en "sources".`;

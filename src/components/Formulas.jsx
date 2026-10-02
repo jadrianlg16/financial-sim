@@ -203,8 +203,8 @@ export const Formulas = ({ R, inputs }) => {
           {isUsedCar && (
             <>
               {' '}
-              <strong>Auto usado (FEATURE 1a):</strong> deprecia más lento que uno nuevo — se usa la
-              tasa de usados ({fmtPct(inputs.usedDepreciationRate, 0)}) afinada por la antigüedad,
+              <strong>Auto usado:</strong> deprecia más lento que uno nuevo — se usa la tasa de
+              usados ({fmtPct(inputs.usedDepreciationRate, 0)}) afinada por la antigüedad,
               resultando en <strong>d = {fmtPct(effDepRate, 0)}/año</strong> (acotada 4%–30%) en vez
               de la tasa de lista de {fmtPct(inputs.depreciationRate, 0)}.
             </>
@@ -231,12 +231,12 @@ export const Formulas = ({ R, inputs }) => {
           <em>
             c<sub>uber</sub>
           </em>{' '}
-          = comisión. El <strong>impuesto depende del régimen fiscal</strong> elegido (FEATURE 1):
+          = comisión. El <strong>impuesto depende del régimen fiscal</strong> elegido:
           {R.taxRegime === 'gross' && (
             <>
               {' '}
-              régimen <strong>Bruto (escolar)</strong>: impuesto = {fmtPct(R.taxRate, 0)} × tarifa
-              bruta. Es el supuesto del problema/escuela y sobreestima el impuesto real.
+              régimen <strong>Bruto (simple)</strong>: impuesto = {fmtPct(R.taxRate, 0)} × tarifa
+              bruta. Es un supuesto simplificado que sobreestima el impuesto real.
             </>
           )}
           {R.taxRegime === 'net' && (
@@ -521,8 +521,8 @@ export const Formulas = ({ R, inputs }) => {
               p<sub>seg</sub>
             </em>{' '}
             = {fmtPct(R.insurancePctOfValue, 1)}/año del valor asegurado. Como el auto se deprecia,
-            la prima BAJA cada año (realista para cobertura amplia, FEATURE 3). El KPI de seguro
-            muestra el valor del año 1.
+            la prima BAJA cada año (realista para cobertura amplia). El KPI de seguro muestra el
+            valor del año 1.
           </div>
           <div className="formula-substituted">
             Prima año 1 = {fmtPct(R.insurancePctOfValue, 1)} × {fmtMXN(inputs.carPrice)} ={' '}

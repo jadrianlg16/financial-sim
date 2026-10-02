@@ -87,7 +87,7 @@ export const UberGroups = ({ inputs, setInputs, set, mode }) => {
               onChange={(v) => set('taxRegime', v)}
               options={[
                 { value: 'resico', label: 'RESICO (real)' },
-                { value: 'gross', label: 'Bruto (escolar)' },
+                { value: 'gross', label: 'Bruto (simple)' },
                 { value: 'net', label: 'Utilidad' },
               ]}
             />
@@ -103,7 +103,7 @@ export const UberGroups = ({ inputs, setInputs, set, mode }) => {
               {(inputs.taxRegime || 'resico') === 'resico' &&
                 '→ Retención de plataforma sobre tu ingreso bruto (lo realista hoy en México).'}
               {inputs.taxRegime === 'gross' &&
-                '→ % de la tarifa bruta. Es el supuesto escolar/del problema (30%); sobreestima el impuesto.'}
+                '→ % de la tarifa bruta (p. ej. 30%). Es un supuesto simplificado: sobreestima el impuesto.'}
               {inputs.taxRegime === 'net' &&
                 '→ % sobre la utilidad del viaje (tarifa − comisión − costo variable).'}
             </div>
@@ -145,8 +145,8 @@ export const UberGroups = ({ inputs, setInputs, set, mode }) => {
             step={0.1}
             decimals={1}
             onChange={(v) => set('tripsPerHour', v)}
-            suffix={inputs.tripsPerHour > 4 ? '⚠️ Máx. 4 según el problema' : 'viajes/hora'}
-            info="El problema asume un tope realista de 4 viajes por hora."
+            suffix={inputs.tripsPerHour > 4 ? '⚠️ Más de 4 no es realista' : 'viajes/hora'}
+            info="El modelo asume un tope realista de 4 viajes por hora."
           />
           <Field
             label="Horas máx. disponibles/día"

@@ -38,7 +38,7 @@ export const Verdict = ({ R, inputs }) => {
         </div>
         <div>
           <div className="verdict-text">Más de 4 viajes/hora no es realista</div>
-          <div className="verdict-sub">El problema asume un tope físico de 4 viajes por hora.</div>
+          <div className="verdict-sub">El modelo asume un tope físico de 4 viajes por hora.</div>
         </div>
       </div>
     );

@@ -14,7 +14,7 @@ export function reportLabels(R) {
         : 'Contado';
   const taxRegimeLabel =
     R.taxRegime === 'gross'
-      ? `Bruto/escolar (${fmtPct(R.taxRate, 0)} de la tarifa)`
+      ? `Bruto/simple (${fmtPct(R.taxRate, 0)} de la tarifa)`
       : R.taxRegime === 'net'
         ? `Sobre utilidad (${fmtPct(R.taxRate, 0)})`
         : `RESICO (retención ${fmtPct(R.resicoRate, 1)})`;
@@ -174,7 +174,7 @@ export function buildNarrative(R, inputs, { car, city, vehicleLabel, yearEnd }) 
         : `con un enganche de ${fmtMXN(R.cashPaid)} (${fmtPct(R.cashPaid / inputs.carPrice, 0)}) ` +
           `financiando los restantes ${fmtMXN(R.financed)}`;
   const purchase = [
-    `Nuestra conclusión sobre la situación problema fue adquirir un ${car} ` +
+    `La conclusión del análisis es adquirir un ${car} ` +
       `(motor ${vehicleLabel?.toLowerCase()}, modelo ${inputs.carYear}) ` +
       `por un costo de ${fmtMXN(inputs.carPrice)}, ${purchaseDesc}`,
     financed

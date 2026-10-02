@@ -243,8 +243,7 @@ export const Report = ({ R, inputs, sources }) => {
 
       <h2 style={{ color: 'var(--muted)' }}>Apéndice · Conclusión narrativa</h2>
       <p style={{ fontSize: 12, color: 'var(--muted)', marginTop: -4 }}>
-        Redacción corrida con el formato de la situación problema académica, por si necesitas
-        entregarla así.
+        El mismo análisis en prosa corrida, listo para copiar a un documento.
       </p>
       {narrative.map((p, i) => (
         <p key={i} style={{ fontSize: 13.5 }}>

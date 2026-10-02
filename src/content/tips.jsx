@@ -20,7 +20,7 @@ export const TIPS = {
   salesFactor:
     'Factor de venta: vender al valor calculado (1.00×), más barato (0.80×) o más caro (1.10×). El uso intensivo de Uber suele bajar la reventa.',
   uberCommission: 'Lo que se queda la app Uber de cada viaje (típicamente 25%).',
-  tax: 'Porcentaje de impuestos calculado sobre la tarifa bruta del viaje, como pide el problema: precio del viaje menos comisión Uber menos impuestos.',
+  tax: 'Porcentaje de impuestos: en el régimen Bruto se aplica a la tarifa bruta del viaje; en Utilidad, a la ganancia del viaje. El ingreso neto es el precio del viaje menos la comisión de Uber menos impuestos.',
   refrendo:
     '<strong>Refrendo / Tenencia.</strong> Pago vehicular estatal para mantener tus placas vigentes. Varía por estado; aquí se captura como monto mensual prorrateado.',
   insurance:
@@ -91,7 +91,7 @@ export const TIPS = {
     '<strong>Costo por depreciación.</strong> Lo que el auto pierde de valor en el horizonte (precio − valor de reventa). Suele ser el costo más grande de tener un auto, aunque no lo "sientas" cada mes.',
   // --- Régimen fiscal del ingreso Uber ---
   taxRegime:
-    '<strong>Régimen fiscal del ingreso Uber.</strong> Cómo se calcula el impuesto de cada viaje.<br/><strong>RESICO (realista):</strong> la plataforma retiene un % pequeño del ingreso bruto (≈2.5%). Es lo que aplica a la mayoría de conductores en México hoy.<br/><strong>Bruto (escolar):</strong> % sobre la tarifa bruta del viaje (30% por defecto). Es el supuesto del problema/escuela; sobreestima mucho el impuesto.<br/><strong>Utilidad:</strong> el % se aplica sólo a la ganancia del viaje (tarifa − comisión − costo variable), no al bruto.',
+    '<strong>Régimen fiscal del ingreso Uber.</strong> Cómo se calcula el impuesto de cada viaje.<br/><strong>RESICO (realista):</strong> la plataforma retiene un % pequeño del ingreso bruto (≈2.5%). Es lo que aplica a la mayoría de conductores en México hoy.<br/><strong>Bruto (simple):</strong> % sobre la tarifa bruta del viaje (30% por defecto). Es un supuesto simplificado; sobreestima mucho el impuesto.<br/><strong>Utilidad:</strong> el % se aplica sólo a la ganancia del viaje (tarifa − comisión − costo variable), no al bruto.',
   resicoRate:
     '<strong>Retención RESICO.</strong> Porcentaje que la plataforma retiene de tu ingreso BRUTO bajo el régimen simplificado (RESICO). En México la retención de plataformas digitales ronda 2.1% a 2.5% del ingreso.',
   // --- Tipo de financiamiento ---
