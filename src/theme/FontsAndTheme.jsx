@@ -1,6 +1,5 @@
 export const FontsAndTheme = () => (
   <style>{`
-    @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
     :root {
       --bg:#f5f0e6; --bg-2:#ede5d3; --surface:#fdfaf2;
       --ink:#181410; --ink-2:#3a322a; --muted:#7a6e5e;
