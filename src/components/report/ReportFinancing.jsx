@@ -9,7 +9,7 @@ export const ReportFinancing = ({ R, inputs }) => (
         <h2>Arrendamiento (renta)</h2>
         <p>
           No estás comprando el auto: lo <strong>rentas</strong> por{' '}
-          <strong>{fmtMXN(R.monthlyPayment)}/mes</strong> durante {inputs.loanMonths} meses. Como
+          <strong>{fmtMXN(R.monthlyPayment)}/mes</strong> durante {R.months} meses. Como
           arrendatario <strong>no eres dueño</strong>, así que no hay reventa ni depreciación a tu
           favor al final del plazo. El enganche/depósito inicial de {fmtMXN(R.cashPaid)} normalmente{' '}
           <strong>no es recuperable</strong>.

@@ -274,7 +274,7 @@ export function buildMarkdown(R, inputs, ctx) {
         : '';
     financing = `
 ## Arrendamiento
-- Renta de ${fmtMXN(R.monthlyPayment)}/mes por ${inputs.loanMonths} meses; NO eres dueño, no hay reventa ni depreciación a tu favor.
+- Renta de ${fmtMXN(R.monthlyPayment)}/mes por ${R.months} meses; NO eres dueño, no hay reventa ni depreciación a tu favor.
 - Enganche/depósito inicial ${fmtMXN(R.cashPaid)} (no recuperable).${penalty}
 - El seguro, la gasolina y el mantenimiento los sigues pagando tú como arrendatario.
 `;
