@@ -179,8 +179,9 @@ export function runMonteCarlo(inputs, iterations = 3000, { rng = Math.random, ye
     .sort((a, b) => a - b);
   const feasibleRate = results.reduce((a, r) => a + r.feasible, 0) / results.length;
   const q = (arr, p) => (arr.length ? arr[Math.floor(arr.length * p)] : NaN);
-  const min = beSorted.length ? Math.min(...beSorted) : 0,
-    max = beSorted.length ? Math.max(...beSorted) : 0;
+  // beSorted is ascending, so its ends are the extremes (no spread of 10,000 arguments).
+  const min = beSorted.length ? beSorted[0] : 0,
+    max = beSorted.length ? beSorted[beSorted.length - 1] : 0;
   const bins = 24;
   const binSize = (max - min) / bins || 1;
   const hist = Array(bins)
