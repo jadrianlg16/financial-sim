@@ -257,6 +257,20 @@ export function buildNarrative(R, inputs, { car, city, vehicleLabel, yearEnd }) 
 }
 
 /**
+ * Text from the user or an import, made safe for one line of Markdown: line
+ * breaks become spaces (no injected headings or list items) and characters with
+ * Markdown or HTML meaning are backslash-escaped, so they show up literally.
+ */
+export const mdInline = (text) =>
+  String(text)
+    .replace(/[\r\n]+/g, ' ')
+    .replace(/[\\`*_[\]<>#|!~&]/g, '\\$&');
+
+/** A code fence longer than any run of backticks inside `text`. */
+const fenceFor = (text) =>
+  '`'.repeat(Math.max(3, ...(text.match(/`+/g) || []).map((run) => run.length + 1)));
+
+/**
  * The report as Markdown, for the "Descargar .md" button (paste into a document
  * editor or convert to PDF).
  */
@@ -330,13 +344,15 @@ export function buildMarkdown(R, inputs, ctx) {
     R.totalRepairReserve > 0
       ? `- Reserva de reparaciones acumulada en el horizonte: ${fmtMXN(R.totalRepairReserve)}.\n`
       : '';
-  const notes =
-    inputs.userNotes && inputs.userNotes.trim()
-      ? `\n## Notas y fuentes del usuario\n${inputs.userNotes.trim()}\n`
-      : '';
+  // Las notas son texto libre: van en un bloque de código para que se lean tal cual.
+  const userNotes = inputs.userNotes && inputs.userNotes.trim();
+  const fence = userNotes ? fenceFor(userNotes) : '';
+  const notes = userNotes
+    ? `\n## Notas y fuentes del usuario\n${fence}text\n${userNotes}\n${fence}\n`
+    : '';
 
-  return `# Análisis de decisión — ${car}
-*${isUsed ? 'Usado/seminuevo' : 'Nuevo'} · ${vehicleLabel} · modelo ${inputs.carYear} · ${city} · horizonte ${inputs.horizonYears} años (${yearStart}–${yearEnd})*
+  return `# Análisis de decisión — ${mdInline(car)}
+*${isUsed ? 'Usado/seminuevo' : 'Nuevo'} · ${vehicleLabel} · modelo ${inputs.carYear} · ${mdInline(city)} · horizonte ${inputs.horizonYears} años (${yearStart}–${yearEnd})*
 
 ## Recomendación: ${rec.title}
 ${rec.reasons.map((r) => `- ${r}`).join('\n')}

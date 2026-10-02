@@ -79,3 +79,47 @@ describe('report text', () => {
     expect(md).toContain('## Supuestos clave');
   });
 });
+
+describe('Markdown export of imported or typed text', () => {
+  const evilName =
+    '../x\n# Injected heading\n<img src=x onerror=alert(1)> [verify](https://attacker.example) *bold*';
+  const exportWith = (overrides, car = evilName, city = 'Monterrey') => {
+    const { R, inputs } = run(overrides);
+    return buildMarkdown(R, inputs, {
+      car,
+      city,
+      vehicleLabel: 'Gasolina',
+      isUsed: false,
+      yearStart: YEAR,
+      yearEnd: YEAR + 3,
+      rec: buildRecommendation(R, inputs, null),
+      incomePct: null,
+      labels: reportLabels(R),
+      breakdown: horizonBreakdown(R, 'Combustible'),
+      mc: null,
+      mcRuns: 0,
+    });
+  };
+
+  it('keeps the car name and city on one escaped line', () => {
+    const md = exportWith({}, evilName, 'Mty\n## Otra sección <b>');
+    const [title, subtitle] = md.split('\n');
+    expect(title.startsWith('# Análisis de decisión — ')).toBe(true);
+    expect(title).not.toMatch(/(^|[^\\])<img/);
+    expect(title).toContain(String.raw`\<img src=x onerror=alert(1)\>`);
+    expect(title).toContain(String.raw`\[verify\](https://attacker.example) \*bold\*`);
+    expect(subtitle).toContain(String.raw`Mty \#\# Otra sección \<b\>`);
+    expect(md).not.toMatch(/^# Injected heading/m);
+    expect(md).not.toMatch(/^## Otra sección/m);
+  });
+
+  it('puts the notes in a code fence that the notes cannot close', () => {
+    const notes = '=cmd|"/c calc"!A1\n<script>alert(1)</script>\n```\n# not a heading';
+    const md = exportWith({ userNotes: notes });
+    const section = md.slice(md.indexOf('## Notas y fuentes del usuario'));
+    // The notes contain a ``` line, so the fence is four backticks and only the
+    // closing fence after the notes can end the block.
+    expect(section).toContain('````text\n' + notes + '\n````');
+    expect(section.match(/^````$/gm)).toHaveLength(1);
+  });
+});

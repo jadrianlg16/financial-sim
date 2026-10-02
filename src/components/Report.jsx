@@ -93,7 +93,10 @@ export const Report = ({ R, inputs, sources }) => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `analisis_${car.replace(/[^a-z0-9]+/gi, '_').toLowerCase()}.md`;
+    a.download = `analisis_${car
+      .replace(/[^a-z0-9]+/gi, '_')
+      .toLowerCase()
+      .slice(0, 60)}.md`;
     a.click();
     URL.revokeObjectURL(url);
   };
