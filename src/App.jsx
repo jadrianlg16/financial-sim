@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { lazy, Suspense, useState, useEffect, useMemo, useRef } from 'react';
 import {
   BarChart3,
   FileText,
@@ -9,20 +9,35 @@ import {
   Upload,
   HelpCircle,
 } from 'lucide-react';
-import { Comparison } from './components/Comparison.jsx';
-import { Dashboard } from './components/Dashboard.jsx';
-import { Formulas } from './components/Formulas.jsx';
-import { Glossary } from './components/Glossary.jsx';
-import { ImportCase } from './components/ImportCase.jsx';
-import { MonteCarlo } from './components/MonteCarlo.jsx';
-import { Report } from './components/Report.jsx';
-import { Sensitivity } from './components/Sensitivity.jsx';
 import { Sidebar } from './components/Sidebar.jsx';
 import { calculate } from './domain/calculate.js';
 import { CAR_PRESETS, SCENARIO_COLORS, VEHICLE_TYPES } from './domain/constants.js';
 import { DEFAULT_INPUTS } from './domain/defaults.js';
 import { STORAGE_KEY, readPersisted } from './storage/persistence.js';
 import { FontsAndTheme } from './theme/FontsAndTheme.jsx';
+
+// Each tab is its own chunk, loaded the first time it is opened, so the first
+// download carries only the shell, the sidebar and the model. Recharts goes with
+// the chart tabs.
+const lazyNamed = (load, name) => lazy(() => load().then((m) => ({ default: m[name] })));
+const Dashboard = lazyNamed(() => import('./components/Dashboard.jsx'), 'Dashboard');
+const Comparison = lazyNamed(() => import('./components/Comparison.jsx'), 'Comparison');
+const Sensitivity = lazyNamed(() => import('./components/Sensitivity.jsx'), 'Sensitivity');
+const MonteCarlo = lazyNamed(() => import('./components/MonteCarlo.jsx'), 'MonteCarlo');
+const Formulas = lazyNamed(() => import('./components/Formulas.jsx'), 'Formulas');
+const ImportCase = lazyNamed(() => import('./components/ImportCase.jsx'), 'ImportCase');
+const Report = lazyNamed(() => import('./components/Report.jsx'), 'Report');
+const Glossary = lazyNamed(() => import('./components/Glossary.jsx'), 'Glossary');
+
+const TabLoading = () => (
+  <div
+    className="card"
+    data-loading-tab
+    style={{ padding: 40, textAlign: 'center', color: 'var(--muted)' }}
+  >
+    Cargando…
+  </div>
+);
 
 // ============================================================================
 // APP
@@ -135,23 +150,25 @@ export default function App() {
               <HelpCircle size={13} /> Glosario
             </button>
           </div>
-          {tab === 'dashboard' && <Dashboard R={R} inputs={inputs} />}
-          {tab === 'compare' && (
-            <Comparison saved={saved} currentInputs={inputs} setSaved={setSaved} />
-          )}
-          {tab === 'sens' && <Sensitivity inputs={inputs} />}
-          {tab === 'mc' && <MonteCarlo inputs={inputs} />}
-          {tab === 'formulas' && <Formulas R={R} inputs={inputs} />}
-          {tab === 'import' && (
-            <ImportCase
-              inputs={inputs}
-              setInputs={setInputs}
-              sources={sources}
-              setSources={setSources}
-            />
-          )}
-          {tab === 'report' && <Report R={R} inputs={inputs} sources={sources} />}
-          {tab === 'glossary' && <Glossary />}
+          <Suspense fallback={<TabLoading />}>
+            {tab === 'dashboard' && <Dashboard R={R} inputs={inputs} />}
+            {tab === 'compare' && (
+              <Comparison saved={saved} currentInputs={inputs} setSaved={setSaved} />
+            )}
+            {tab === 'sens' && <Sensitivity inputs={inputs} />}
+            {tab === 'mc' && <MonteCarlo inputs={inputs} />}
+            {tab === 'formulas' && <Formulas R={R} inputs={inputs} />}
+            {tab === 'import' && (
+              <ImportCase
+                inputs={inputs}
+                setInputs={setInputs}
+                sources={sources}
+                setSources={setSources}
+              />
+            )}
+            {tab === 'report' && <Report R={R} inputs={inputs} sources={sources} />}
+            {tab === 'glossary' && <Glossary />}
+          </Suspense>
         </main>
       </div>
     </div>
