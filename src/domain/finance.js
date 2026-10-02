@@ -144,10 +144,3 @@ export function equivalentAnnualCost(pvCost, annualRate, years) {
   const annuityFactor = (1 - Math.pow(1 + annualRate, -years)) / annualRate;
   return pvCost / annuityFactor;
 }
-
-// FEATURE 1(a) — tasa de depreciación EFECTIVA según condición/edad del auto.
-// Los usados deprecian MÁS LENTO en % (la curva se aplana con la edad): se usa
-// usedDepreciationRate (default 0.12) en lugar de la tasa de auto nuevo, y se
-// afina un poco con la antigüedad actual (2026 − carYear) restando 0.5 pts por
-// cada año de edad. La tasa resultante queda acotada a [0.04, 0.30] para no
-// degenerar. Los autos NUEVOS conservan exactamente su tasa de lista (sin cambio).

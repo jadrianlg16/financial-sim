@@ -5,13 +5,15 @@ import { carDisplayName } from '../domain/carDisplay.js';
 import { CITY_PRESETS, VEHICLE_TYPES } from '../domain/constants.js';
 import { fmtFixed, fmtMXN, fmtN, fmtPct } from '../domain/format.js';
 import { runMonteCarlo } from '../domain/monteCarlo.js';
+import { currentYear, projectionYear } from '../domain/year.js';
 
 export const Report = ({ R, inputs, sources }) => {
   const car = carDisplayName(inputs);
   const city = inputs.cityName || CITY_PRESETS[inputs.city]?.name || 'la ciudad';
-  const yearEnd = 2025 + inputs.horizonYears;
+  const yearStart = currentYear();
+  const yearEnd = projectionYear(inputs.horizonYears, yearStart);
   const vehicleLabel = VEHICLE_TYPES[inputs.vehicleType]?.label;
-  const carAge = Math.max(0, 2026 - inputs.carYear);
+  const carAge = Math.max(0, yearStart - inputs.carYear);
   const isUsed = inputs.vehicleCondition === 'used';
   const incomePct =
     inputs.monthlyIncome > 0 ? R.monthlyTotalOperative / inputs.monthlyIncome : null;
@@ -185,7 +187,7 @@ A lo largo de ${inputs.horizonYears} años, el gasto bruto total del proyecto su
   ].filter((b) => b.total > 0);
   // Reporte descargable en Markdown (sirve para pegar en Word/Docs o convertir a PDF).
   const md = `# Análisis de decisión — ${car}
-*${isUsed ? 'Usado/seminuevo' : 'Nuevo'} · ${vehicleLabel} · modelo ${inputs.carYear} · ${city} · horizonte ${inputs.horizonYears} años (2026–${yearEnd})*
+*${isUsed ? 'Usado/seminuevo' : 'Nuevo'} · ${vehicleLabel} · modelo ${inputs.carYear} · ${city} · horizonte ${inputs.horizonYears} años (${yearStart}–${yearEnd})*
 
 ## Recomendación: ${rec.title}
 ${rec.reasons.map((r) => `- ${r}`).join('\n')}
@@ -359,7 +361,8 @@ ${inputs.userNotes && inputs.userNotes.trim() ? `\n## Notas y fuentes del usuari
           textTransform: 'uppercase',
         }}
       >
-        {isUsed ? 'Usado/seminuevo' : 'Nuevo'} · {car} · {vehicleLabel} · {city} · 2026–{yearEnd}
+        {isUsed ? 'Usado/seminuevo' : 'Nuevo'} · {car} · {vehicleLabel} · {city} · {yearStart}–
+        {yearEnd}
       </div>
       {inputs.carDescription && (
         <p style={{ fontSize: 13, color: 'var(--muted)', marginTop: 6 }}>

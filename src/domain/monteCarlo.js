@@ -18,7 +18,7 @@ export function randomNormal(mean, std, rng = Math.random) {
  * break-even trips, liquidation value and net result (P10/P50/P90, histogram).
  * Pass `{ rng }` to make a run reproducible; every random draw goes through it.
  */
-export function runMonteCarlo(inputs, iterations = 3000, { rng = Math.random } = {}) {
+export function runMonteCarlo(inputs, iterations = 3000, { rng = Math.random, year } = {}) {
   const results = [];
   const normal = (mean, std) => randomNormal(mean, std, rng);
   const jitter = (val, pct, lo = -Infinity, hi = Infinity) =>
@@ -61,7 +61,7 @@ export function runMonteCarlo(inputs, iterations = 3000, { rng = Math.random } =
       depreciationRate: Math.min(0.5, Math.max(0.05, normal(inputs.depreciationRate, 0.04))),
       salesFactor: Math.max(0.3, jitter(inputs.salesFactor, 0.12)),
     };
-    const c = calculate(sim);
+    const c = calculate(sim, { year });
     let finalPos = c.liquidationPosition;
     let net = c.netProjectResult;
     // FEATURE 3 — ¿hubo pérdida total en esta iteración? (sólo si eres dueño)
@@ -70,7 +70,12 @@ export function runMonteCarlo(inputs, iterations = 3000, { rng = Math.random } =
       // horizonte (acotamos a NO superar el valor de mercado terminal, para que la
       // pérdida total sea un RIESGO y no un premio) menos el deducible. La aseguradora
       // liquida la deuda viva; el resto te queda. Sustituye la reventa por el pago.
-      const midValue = depreciatedValue(c.carPrice, sim, Math.max(1, Math.round(horizonYears / 2)));
+      const midValue = depreciatedValue(
+        c.carPrice,
+        sim,
+        Math.max(1, Math.round(horizonYears / 2)),
+        year,
+      );
       const insuredValue = Math.min(midValue, c.valueAtEnd); // no premiar el siniestro
       const payout = Math.max(0, insuredValue * (1 - deductiblePct));
       const tlRecovery = payout - c.remainingDebt; // recuperación terminal bajo pérdida total

@@ -21,6 +21,7 @@ import { TIPS } from '../content/tips.jsx';
 import { CAR_PRESETS, CITY_PRESETS } from '../domain/constants.js';
 import { depreciatedValue, effectiveDepRate } from '../domain/depreciation.js';
 import { fmtMXN, fmtN, fmtPct } from '../domain/format.js';
+import { currentYear } from '../domain/year.js';
 import { readSidebarMode } from '../storage/persistence.js';
 
 // ============================================================================
@@ -79,7 +80,7 @@ export const Sidebar = ({ inputs, setInputs, onReset, onSave }) => {
       };
       const cond = c.condition || 'new';
       next.vehicleCondition = cond;
-      next.carYear = c.year || 2026;
+      next.carYear = c.year || currentYear();
       next.odometerKm = c.odometerKm || 0;
       // FEATURE 1(b) — garantía: usados sin garantía (0), nuevos con 3 años.
       next.warrantyYearsRemaining = cond === 'used' ? 0 : 3;
@@ -268,12 +269,12 @@ export const Sidebar = ({ inputs, setInputs, onReset, onSave }) => {
           label="Año modelo"
           value={inputs.carYear}
           min={2000}
-          max={2027}
+          max={currentYear() + 1}
           step={1}
           onChange={(v) => set('carYear', v)}
           suffix={
-            inputs.carYear < 2026
-              ? `≈${Math.max(0, 2026 - inputs.carYear)} años de antigüedad`
+            inputs.carYear < currentYear()
+              ? `≈${Math.max(0, currentYear() - inputs.carYear)} años de antigüedad`
               : 'nuevo'
           }
         />

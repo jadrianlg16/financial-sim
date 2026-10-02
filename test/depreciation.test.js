@@ -31,6 +31,19 @@ describe('effectiveDepRate', () => {
     expect(effectiveDepRate(newCar)).toBe(0.2);
   });
 
+  it("flattens a used car's rate by half a point per year of age", () => {
+    const used = { ...newCar, vehicleCondition: 'used', usedDepreciationRate: 0.12, carYear: 2020 };
+    expect(effectiveDepRate(used, 2026)).toBeCloseTo(0.12 - 0.005 * 6, 12);
+    expect(effectiveDepRate(used, 2020)).toBeCloseTo(0.12, 12);
+    // Never below 4% a year, however old the car is.
+    expect(effectiveDepRate({ ...used, carYear: 1990 }, 2026)).toBe(0.04);
+  });
+
+  it('uses the age-adjusted rate in the projected value', () => {
+    const used = { ...newCar, vehicleCondition: 'used', usedDepreciationRate: 0.12, carYear: 2020 };
+    expect(depreciatedValue(100000, used, 2, 2026)).toBeCloseTo(100000 * (1 - 0.09) ** 2, 9);
+  });
+
   it('clamps an out-of-range list rate', () => {
     expect(effectiveDepRate({ ...newCar, depreciationRate: 2 })).toBe(0.95);
     expect(effectiveDepRate({ ...newCar, depreciationRate: 'abc' })).toBe(0);

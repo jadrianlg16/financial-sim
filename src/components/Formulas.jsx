@@ -1,5 +1,6 @@
 import { effectiveDepRate } from '../domain/depreciation.js';
 import { fmtFixed, fmtMXN, fmtN, fmtPct } from '../domain/format.js';
+import { projectionYear } from '../domain/year.js';
 
 export const Formulas = ({ R, inputs }) => {
   const i = inputs.interestRate / 12;
@@ -323,7 +324,7 @@ export const Formulas = ({ R, inputs }) => {
             )}
             /L
           </strong>{' '}
-          en {2025 + inputs.horizonYears}
+          en {projectionYear(inputs.horizonYears)}
         </div>
       </div>
 

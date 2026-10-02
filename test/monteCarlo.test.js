@@ -3,7 +3,9 @@ import { DEFAULT_INPUTS } from '../src/domain/defaults.js';
 import { randomNormal, runMonteCarlo } from '../src/domain/monteCarlo.js';
 import { seededRng } from './helpers/rng.js';
 
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 describe('randomNormal', () => {
   it('draws from the injected generator with roughly the requested mean and spread', () => {

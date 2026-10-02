@@ -1,3 +1,5 @@
+import { currentYear } from './year.js';
+
 // ----------------------------------------------------------------------------
 // buildAIPrompt  ·  Petición: generar un prompt para que una IA investigue un
 // auto nuevo y devuelva un JSON ESTRUCTURADO con TODAS las variables, y que
@@ -5,7 +7,7 @@
 // Profeco, CFE, aseguradoras, Uber MX, etc.). Las estimaciones se marcan
 // [ESTIMACIÓN]. Así el usuario puede verificar que la info está respaldada.
 // ----------------------------------------------------------------------------
-export function buildAIPrompt(carName) {
+export function buildAIPrompt(carName, year = currentYear()) {
   return `Eres un investigador financiero. Necesito datos VERIFICADOS y con FUENTE para evaluar la viabilidad de un auto en plataforma Uber en México.
 
 VEHÍCULO A INVESTIGAR: ${carName || '[ingresa el modelo aquí]'}
@@ -23,7 +25,7 @@ Esquema EXACTO:
 {
   "vehicle": {
     "name": "Nombre completo del modelo y versión",
-    "year": 2026,
+    "year": ${year},
     "condition": "new | used",
     "odometerKm": 0,
     "usedDepreciationRate": 0.12,

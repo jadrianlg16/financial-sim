@@ -8,6 +8,7 @@ describe('buildAIPrompt', () => {
     expect(prompt).toContain('VEHÍCULO A INVESTIGAR: BYD Dolphin Mini 2026');
     expect(prompt).toContain('"sources"');
     expect(prompt).toContain('[ESTIMACIÓN]');
+    expect(buildAIPrompt('x', 2031)).toContain('"year": 2031');
   });
 });
 

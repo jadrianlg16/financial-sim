@@ -9,6 +9,7 @@ import {
   solvePeriodicRate,
 } from './finance.js';
 import { clamp, nonNegative, num, positive } from './format.js';
+import { currentYear, projectionYear } from './year.js';
 
 // ============================================================================
 // MOTOR DE CÁLCULO  ·  Objetivos solicitados por el usuario
@@ -29,7 +30,7 @@ import { clamp, nonNegative, num, positive } from './format.js';
 //   - GASTO ACUMULADO por categoría año por año (para la gráfica de largo plazo)
 //     y costo total/neto del proyecto.
 // ============================================================================
-export function calculate(I) {
+export function calculate(I, { year: asOfYear = currentYear() } = {}) {
   const carPrice = nonNegative(I.carPrice);
   const years = Math.max(1, Math.round(positive(I.horizonYears, 1)));
   const horizonMonths = years * 12;
@@ -140,7 +141,7 @@ export function calculate(I) {
   const insurancePctOfValue = clamp(I.insurancePctOfValue, 0, 0.3);
   const insuranceAnnualForYear = (y) => {
     if (insuranceMode !== 'pctOfValue') return nonNegative(I.monthlyInsurance) * 12;
-    const valStart = depreciatedValue(carPrice, I, y - 1); // valor a inicio del año y
+    const valStart = depreciatedValue(carPrice, I, y - 1, asOfYear); // valor a inicio del año y
     return insurancePctOfValue * valStart;
   };
   // Fijos mensuales que NO dependen de km (todo menos energía y mantenimiento variable).
@@ -178,7 +179,7 @@ export function calculate(I) {
 
   // Valor depreciado: sólo importa si eres dueño. En arrendamiento el auto NO es tuyo,
   // así que no hay valor de reventa que recuperar (FEATURE 2 · lease).
-  const valueAtEnd = owned ? depreciatedValue(carPrice, I, years) : 0;
+  const valueAtEnd = owned ? depreciatedValue(carPrice, I, years, asOfYear) : 0;
   const grossSalePrice = owned ? valueAtEnd * nonNegative(I.salesFactor) : 0;
   // Costo de venta al liquidar (comisión/agencia, trámite de traspaso).
   const sellingCostPct = clamp(I.sellingCostPct, 0, 0.5);
@@ -326,7 +327,7 @@ export function calculate(I) {
   // Inflación general de costos (seguro, refrendo, mantenimiento, misc, etc.) y
   // reserva de reparaciones que crece con la edad del auto (clave en usados).
   const generalInflation = Math.max(-0.5, num(I.generalInflation));
-  const baseAgeYears = Math.max(0, 2026 - num(I.carYear, 2026));
+  const baseAgeYears = Math.max(0, asOfYear - num(I.carYear, asOfYear));
   const repairBase = nonNegative(I.repairReserveAnnual);
   const repairGrowth = nonNegative(I.repairGrowth != null ? I.repairGrowth : 0.15);
   // FEATURE 1(b) — ventana de garantía: mientras el año y cae dentro de la garantía
@@ -404,12 +405,12 @@ export function calculate(I) {
     cumRevenue += annualRevenue;
     cumCosts += annualCosts;
     cashflow.push({
-      year: 2025 + y,
+      year: projectionYear(y, asOfYear),
       revenue: annualRevenue,
       costs: annualCosts,
       cumRevenue,
       cumCosts,
-      depValue: owned ? depreciatedValue(carPrice, I, y) : 0, // en lease no eres dueño → 0
+      depValue: owned ? depreciatedValue(carPrice, I, y, asOfYear) : 0, // en lease no eres dueño → 0
       debtRemaining:
         isLease || y * 12 >= months || months === 0
           ? 0

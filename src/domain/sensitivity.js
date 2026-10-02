@@ -36,10 +36,13 @@ export function buildSensKeys(inputs) {
   return inputs.operationMode === 'no-uber' ? keys.filter((k) => !k.uberOnly) : keys;
 }
 
-export function sensitivity(inputs) {
+export function sensitivity(inputs, { year } = {}) {
   const uber = inputs.operationMode !== 'no-uber';
   // En modo Uber medimos el punto de equilibrio; sin Uber, el costo neto del proyecto.
-  const metricOf = (I) => (uber ? calculate(I).breakEvenTrips : calculate(I).totalProjectCost);
+  const metricOf = (I) => {
+    const R = calculate(I, { year });
+    return uber ? R.breakEvenTrips : R.totalProjectCost;
+  };
   const base = metricOf(inputs);
   const metricUnit = uber ? 'viajes' : 'MXN';
   return buildSensKeys(inputs)

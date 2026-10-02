@@ -27,6 +27,7 @@ import { carDisplayName } from '../domain/carDisplay.js';
 import { MAX_COMPARE_CARS, applyCarPresetTo, cloneInputs } from '../domain/compare.js';
 import { CAR_PRESETS, SCENARIO_COLORS, VEHICLE_TYPES } from '../domain/constants.js';
 import { fmtMXN, fmtN, fmtPct, num } from '../domain/format.js';
+import { projectionYear } from '../domain/year.js';
 
 export const Comparison = ({ saved, currentInputs, setSaved }) => {
   // Cada auto editable = { id, inputs }. Semilla: 2 copias profundas del sidebar actual.
@@ -84,7 +85,7 @@ export const Comparison = ({ saved, currentInputs, setSaved }) => {
   // Posición acumulada por año (venta − deuda incluida), keyed por sid único.
   const lineData = [];
   for (let y = 1; y <= yearsMax; y++) {
-    const row = { year: 2025 + y };
+    const row = { year: projectionYear(y) };
     cols.forEach((c) => {
       const cf = c.result.cashflow?.[y - 1];
       if (cf) row[c.sid] = Math.round(cf.cumRevenue - cf.cumCosts + (cf.liqValue || 0));

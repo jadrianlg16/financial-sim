@@ -1,4 +1,5 @@
 import { CAR_PRESETS } from './constants.js';
+import { currentYear } from './year.js';
 
 // ============================================================================
 // PÁGINA: COMPARAR  ·  Objetivos solicitados por el usuario
@@ -31,7 +32,7 @@ export function applyCarPresetTo(prev, k) {
   };
   const cond = c.condition || 'new';
   next.vehicleCondition = cond;
-  next.carYear = c.year || 2026;
+  next.carYear = c.year || currentYear();
   next.odometerKm = c.odometerKm || 0;
   if (cond === 'used') {
     if (!prev.repairReserveAnnual) next.repairReserveAnnual = 6000;

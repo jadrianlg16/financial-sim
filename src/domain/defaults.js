@@ -1,7 +1,9 @@
+import { currentYear } from './year.js';
+
 export const DEFAULT_INPUTS = {
   carPreset: 'kia_k3',
   carPrice: 279900,
-  carYear: 2026,
+  carYear: currentYear(),
   vehicleType: 'gasoline',
   kmpl: 18.5,
   kmPerKwh: 6.0,

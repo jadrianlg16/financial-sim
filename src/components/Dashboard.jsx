@@ -21,6 +21,7 @@ import { Verdict } from './Verdict.jsx';
 import { Info } from './ui/Info.jsx';
 import { TIPS } from '../content/tips.jsx';
 import { fmtFixed, fmtMXN, fmtN, fmtPct } from '../domain/format.js';
+import { projectionYear } from '../domain/year.js';
 
 export const Dashboard = ({ R, inputs }) => {
   const cashflowChart = R.cashflow.map((r) => ({
@@ -218,7 +219,7 @@ export const Dashboard = ({ R, inputs }) => {
         )}
         <div className="kpi">
           <div className="kpi-label">
-            Valor en {2025 + inputs.horizonYears} <Info text={TIPS.depreciation} />
+            Valor en {projectionYear(inputs.horizonYears)} <Info text={TIPS.depreciation} />
           </div>
           <div className="kpi-value mono">{fmtMXN(R.valueAtEnd)}</div>
           <div className="kpi-sub">Esperado al vender: {fmtMXN(R.actualSalePrice)}</div>
