@@ -1,0 +1,125 @@
+// Input sets for the calculate() characterization snapshots.
+//
+// BASE is a frozen copy of DEFAULT_INPUTS at the time the snapshots were
+// captured, so later changes to the app defaults do not silently rewrite the
+// expected outputs. Each scenario overrides it to reach a different branch of
+// the model: powertrain, new vs. used, purchase and finance type, operation
+// mode, tax regime, depreciation method and insurance mode.
+
+export const SNAPSHOT_YEAR = 2026;
+
+const BASE = Object.freeze({
+  carPreset: 'kia_k3', carPrice: 279900, carYear: 2026, vehicleType: 'gasoline',
+  kmpl: 18.5, kmPerKwh: 6.0, batteryCapacityKwh: 50, chargerPowerKw: 7, hybridElectricFraction: 0.3, plugInHybrid: false,
+  carDescription: '', carJustification: '', carName: '',
+  purchaseMode: 'credit', downPaymentMode: 'percent', downPaymentPct: 0.2, downPaymentFixed: 56000,
+  cashAmount: 100000, interestRate: 0.135, loanMonths: 48, openingFeePct: 0.02,
+  financeType: 'annuity', balloonPct: 0.35,
+  leaseMonthly: 6500, leaseDownPayment: 20000, leaseTermMonths: 48, leaseKmCapYear: 20000, leaseExcessKmFee: 3,
+  operationMode: 'uber-breakeven', monthlyProfitTarget: 5000,
+  city: 'mty', cityName: 'Monterrey', avgFare: 140, uberCommission: 0.25, taxRate: 0.3,
+  taxRegime: 'resico', resicoRate: 0.025,
+  tripsPerHour: 3, maxHoursPerDay: 8, workDaysPerMonth: 22, personalKmDaily: 20, uberWearFactor: 0.3,
+  uberKmPerTrip: 8,
+  fuelPrice: 24.5, dieselPrice: 26.0, electricityPrice: 4.2, fuelInflation: 0.06, electricityInflation: 0.04,
+  publicChargeFraction: 0.15, publicChargePrice: 8.0,
+  monthlyInsurance: 2000, annualMaintenance: 8000, monthlyRefrendo: 500, dataPlan: 400,
+  insuranceMode: 'fixed', insurancePctOfValue: 0.045,
+  carWash: 800, carWashTips: 400, miscellaneous: 2000, accessories: 100,
+  toxicologyReport: 400, uberCertification: 900,
+  horizonYears: 4, depreciationRate: 0.2, salesFactor: 1.0, monthlyIncome: 0,
+  userNotes: '',
+  vehicleCondition: 'new', odometerKm: 0,
+  usedDepreciationRate: 0.12,
+  warrantyYearsRemaining: 3,
+  depreciationMethod: 'declining', firstYearDepreciation: 0.25,
+  discountRate: 0.105,
+  generalInflation: 0.045,
+  repairReserveAnnual: 0,
+  repairGrowth: 0.15,
+  tradeInValue: 0,
+  acquisitionFees: 0,
+  sellingCostPct: 0,
+  theftLossProbAnnual: 0.015,
+  theftDeductiblePct: 0.05,
+});
+
+export const SCENARIOS = [
+  {
+    // The app's starting scenario: new gasoline car, standard loan, break-even mode.
+    name: 'gasoline-new-loan-breakeven',
+    inputs: { ...BASE },
+  },
+  {
+    // Used plug-in hybrid paid in cash, driven for a profit target; "gross" tax,
+    // first-year-drop depreciation, insurance as % of value, repairs after warranty.
+    name: 'phev-used-cash-target-profit',
+    inputs: {
+      ...BASE,
+      carPreset: 'corolla_hybrid', carPrice: 389000, carYear: 2021, vehicleType: 'hybrid',
+      kmpl: 25, kmPerKwh: 6.5, plugInHybrid: true, hybridElectricFraction: 0.4, batteryCapacityKwh: 13.6,
+      vehicleCondition: 'used', odometerKm: 70000, warrantyYearsRemaining: 0, repairReserveAnnual: 6000,
+      purchaseMode: 'cash', operationMode: 'uber-target-profit', monthlyProfitTarget: 8000,
+      taxRegime: 'gross', depreciationMethod: 'realistic', insuranceMode: 'pctOfValue',
+      horizonYears: 5, personalKmDaily: 35,
+    },
+  },
+  {
+    // New EV on a balloon loan, no ride-hailing: pure cost of ownership,
+    // straight-line depreciation, trade-in and selling costs.
+    name: 'ev-new-balloon-no-uber',
+    inputs: {
+      ...BASE,
+      carPreset: 'mg_zs_ev', carPrice: 569900, vehicleType: 'electric', kmpl: 17, kmPerKwh: 5.8,
+      batteryCapacityKwh: 50.3, financeType: 'balloon', balloonPct: 0.4, loanMonths: 36,
+      operationMode: 'no-uber', depreciationMethod: 'straight', tradeInValue: 60000, sellingCostPct: 0.03,
+      horizonYears: 6, personalKmDaily: 45,
+    },
+  },
+  {
+    // Diesel lease driven for break-even under the "net" tax regime, with
+    // enough mileage to trigger the lease's excess-km penalty.
+    name: 'diesel-lease-net-tax-breakeven',
+    inputs: {
+      ...BASE,
+      carPreset: 'custom', carName: 'Pickup diésel', carPrice: 520000, vehicleType: 'diesel', kmpl: 12,
+      financeType: 'lease', leaseMonthly: 9800, leaseDownPayment: 35000, leaseTermMonths: 36,
+      leaseKmCapYear: 25000, leaseExcessKmFee: 2.5, taxRegime: 'net', horizonYears: 3,
+    },
+  },
+  {
+    // Used EV bought with a cash + credit mix, driven for profit with too few
+    // hours and too much daily range: infeasible, EV range shortfall.
+    name: 'ev-used-mixed-infeasible',
+    inputs: {
+      ...BASE,
+      carPreset: 'custom', carName: 'EV compacto usado', carPrice: 310000, carYear: 2022, vehicleType: 'electric',
+      kmPerKwh: 5.5, batteryCapacityKwh: 30, chargerPowerKw: 3.6, vehicleCondition: 'used', odometerKm: 45000,
+      warrantyYearsRemaining: 1, repairReserveAnnual: 9000, purchaseMode: 'hybrid', cashAmount: 150000,
+      interestRate: 0.16, loanMonths: 36, operationMode: 'uber-target-profit', monthlyProfitTarget: 15000,
+      maxHoursPerDay: 6, workDaysPerMonth: 20, uberKmPerTrip: 12, publicChargeFraction: 0.3,
+      acquisitionFees: 8500, sellingCostPct: 0.05, horizonYears: 4,
+    },
+  },
+  {
+    // Every trip loses money (low fare, high commission): break-even is Infinity
+    // and IRR has no sign change. Paid in cash with a trade-in.
+    name: 'gasoline-cash-negative-contribution',
+    inputs: {
+      ...BASE,
+      carPreset: 'chevrolet_aveo', carPrice: 249900, kmpl: 16.5, purchaseMode: 'cash', tradeInValue: 40000,
+      avgFare: 50, uberCommission: 0.4, uberKmPerTrip: 16, horizonYears: 3,
+    },
+  },
+  {
+    // Interest-free 60-month loan sold after 2 years: debt is still alive at the
+    // end of the horizon, so the sale has to cover it. Fixed down payment.
+    name: 'zero-rate-loan-outlives-horizon',
+    inputs: {
+      ...BASE,
+      carPreset: 'used_versa_20', carPrice: 195000, carYear: 2020, vehicleCondition: 'used', odometerKm: 80000,
+      warrantyYearsRemaining: 0, repairReserveAnnual: 6000, interestRate: 0, loanMonths: 60,
+      downPaymentMode: 'fixed', downPaymentFixed: 30000, openingFeePct: 0, horizonYears: 2, salesFactor: 0.9,
+    },
+  },
+];

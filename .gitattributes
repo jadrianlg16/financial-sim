@@ -1,0 +1,5 @@
+# Keep LF in every checkout (Windows included) so Prettier's check and the
+# characterization snapshots compare the same bytes on every platform.
+* text=auto eol=lf
+*.png binary
+*.ico binary
